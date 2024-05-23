@@ -13,12 +13,12 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRA
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
-# I wrote this small scrit to take care of a pressing need. I downloaded the entire UCF101 video dataset from [4] hoping to use
-# one of the train-test splits specified in many research works. However, I soon found out that some videos from the train-test 
+# I wrote this small script to take care of a pressing need. I downloaded the entire UCF101 video dataset from [4] hoping to use
+# one of the train-test splits specified in many research works. However, I soon found out that some videos from the train-test
 # split 1 list downloaded from [1] did not exist.
 
 # I have written this script therefore to help me download all videos as they apply to the train-test split downloaded from [1]
-# This script is not fail proof but just an adhock script. You can help make it better if you have the time, please.
+# This script is not fail-proof but just an ad-hoc script. You can help make it better if you have the time, please.
 
 # -------------------- REFERENCES ------------------------
 # [1] The Train/Test Splits for Action Recognition. http://crcv.ucf.edu/data/UCF101/UCF101TrainTestSplits-RecognitionTask.zip
@@ -28,15 +28,20 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 # ----------- HOW TO USE -----------
-# 1. Download the train- test split from [1] or [2] (depending on what you are doing) as a text file
-# 2. Modify the parameters of this scrip in the *** modify section **** below and run
+# 1. Download the train-test split from [1] or [2] (depending on what you are doing) as a text file
+# 2. Modify the parameters of this script in the *** modify section **** below and run
 
 
 # Code begins
 # import the important libraries
-import os, sys
+import os
+import sys
 from tqdm import tqdm
 import urllib.request
+import ssl
+
+# Create an unverified SSL context
+ssl._create_default_https_context = ssl._create_unverified_context
 
 """ Video 
     Input:
@@ -45,8 +50,6 @@ import urllib.request
     Output:
         List of videos to be downloaded
 """
-
-
 def dataList(fileName=None):
     # check that a file name is provided
     if fileName is None:
@@ -70,17 +73,14 @@ def dataList(fileName=None):
 """ Path validator script
     Input:
         dirName: Name of the path to be validated. Default is None. If not specified,
-                 error will be flagged and system exite.
+                 error will be flagged and system exit.
 
     Output:
         Returns true for valid path and false for invalid path
 """
-
-
 def validPath(dirName=None):
     if dirName is None:
-        sys.exit("Path is not availabe: [dirAvailabe(dirName=None)]".format())
-
+        sys.exit("Path is not available: [dirAvailable(dirName=None)]".format())
     else:
         if not os.path.exists(dirName):
             return False
@@ -88,35 +88,36 @@ def validPath(dirName=None):
             return True
 
 
-""" Downloader scrip
+""" Downloader script
     Input:
-        vide_name: name of the video to be downloaded. The name will be added to base URL
+        video_name: name of the video to be downloaded. The name will be added to base URL
         save_dir: location where the downloaded video will be saved.
 
     Output:
-        Prints the name of a successfully downladed video
+        Prints the name of a successfully downloaded video
 """
-
-
-def downloader(vide_name, save_dir):
+def downloader(video_name, save_dir):
     # base URL where videos can be downloaded
     baseURL = "http://crcv.ucf.edu/THUMOS14/UCF101/UCF101/"
 
     # re-naming
-    dataPath = str(baseURL) + str(vide_name)
-    dest = os.path.join("./" + save_dir, vide_name)
+    dataPath = str(baseURL) + str(video_name)
+    dest = os.path.join("./" + save_dir, video_name)
 
     # download file now
-    urllib.request.urlretrieve(dataPath, dest)
-    print("Downloaded {} successfully".format(vide_name))
+    try:
+        urllib.request.urlretrieve(dataPath, dest)
+        print("Downloaded {} successfully".format(video_name))
+    except Exception as e:
+        print(f"Failed to download {video_name}: {e}")
 
 
 # *** modify section ****
-# --------- Apllication implementation starts here -----------------
+# --------- Application implementation starts here -----------------
 # variable that holds the text file that holds split list of videos
 textFileList = "trainlist01.txt"
 
-# where to save teh downloaded videos
+# where to save the downloaded videos
 saveDestination = "./Train_Dataset"
 
 # put the content in a variable
@@ -150,6 +151,5 @@ for _ls in tqdm(ls):
 
         if nFile not in skips:
             downloader(nFile, nFolder)
-
     else:
         print("Skipped: ", nFile_)
