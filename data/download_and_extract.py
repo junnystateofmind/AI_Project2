@@ -1,5 +1,6 @@
 import os
 import urllib.request
+import ssl
 from pathlib import Path
 import zipfile
 import rarfile
@@ -8,6 +9,8 @@ import rarfile
 def download_file(url, download_path):
     if not os.path.exists(download_path):
         print(f"Downloading {url} to {download_path}...")
+        # SSL 인증서 검증 무시 설정
+        ssl._create_default_https_context = ssl._create_unverified_context
         urllib.request.urlretrieve(url, download_path)
         print("Download complete.")
 
