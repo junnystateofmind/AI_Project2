@@ -6,7 +6,7 @@ import rarfile
 
 
 def download_file(url, dest_path):
-    response = requests.get(url, stream=True)
+    response = requests.get(url, stream=True, verify=False)
     total_size = int(response.headers.get('content-length', 0))
     block_size = 1024
     with open(dest_path, 'wb') as file, tqdm(
