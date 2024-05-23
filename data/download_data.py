@@ -1,48 +1,62 @@
 import os
-from torchvision.datasets.ucf101 import UCF101
-from torchvision.transforms import Compose, Resize, ToTensor
-from torch.utils.data import DataLoader
+import requests
+import zipfile
+from tqdm import tqdm
+import rarfile
 
-# 데이터셋 경로 설정
-root = "./UCF101"
-annotation_path = "./UCF101/annotations"
 
-# 전처리 변환 설정
-transform = Compose([
-    Resize((224, 224)),
-    ToTensor(),
-])
+def download_file(url, dest_path):
+    response = requests.get(url, stream=True)
+    total_size = int(response.headers.get('content-length', 0))
+    block_size = 1024
+    with open(dest_path, 'wb') as file, tqdm(
+            desc=dest_path,
+            total=total_size,
+            unit='iB',
+            unit_scale=True,
+            unit_divisor=1024,
+    ) as bar:
+        for data in response.iter_content(block_size):
+            bar.update(len(data))
+            file.write(data)
 
-# 데이터셋 초기화
-ucf101_train = UCF101(
-    root=root,
-    annotation_path=annotation_path,
-    frames_per_clip=16,
-    step_between_clips=1,
-    fold=1,
-    train=True,
-    transform=transform
-)
 
-ucf101_test = UCF101(
-    root=root,
-    annotation_path=annotation_path,
-    frames_per_clip=16,
-    step_between_clips=1,
-    fold=1,
-    train=False,
-    transform=transform
-)
+def extract_rar(rar_path, extract_path):
+    with rarfile.RarFile(rar_path) as rar:
+        rar.extractall(path=extract_path)
+    print(f"Extracted {rar_path} to {extract_path}")
 
-# DataLoader 설정
-train_loader = DataLoader(ucf101_train, batch_size=4, shuffle=True, num_workers=2)
-test_loader = DataLoader(ucf101_test, batch_size=4, shuffle=False, num_workers=2)
 
-# 데이터 로드 예제
-for batch in train_loader:
-    videos, audios, labels = batch
-    print(f"비디오 크기: {videos.size()}")
-    print(f"오디오 크기: {audios.size()}")
-    print(f"레이블: {labels}")
-    break
+def extract_zip(zip_path, extract_path):
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(extract_path)
+    print(f"Extracted {zip_path} to {extract_path}")
 
+
+def prepare_ucf101_dataset(data_dir):
+    ucf101_url = "https://www.crcv.ucf.edu/data/UCF101/UCF101.rar"
+    annotations_url = "https://www.crcv.ucf.edu/data/UCF101/UCF101TrainTestSplits-RecognitionTask.zip"
+
+    raw_data_path = os.path.join(data_dir, 'raw')
+    os.makedirs(raw_data_path, exist_ok=True)
+
+    ucf101_rar_path = os.path.join(raw_data_path, 'UCF101.rar')
+    annotations_zip_path = os.path.join(raw_data_path, 'UCF101TrainTestSplits-RecognitionTask.zip')
+
+    ucf101_extract_path = os.path.join(raw_data_path, 'UCF101')
+    annotations_extract_path = os.path.join(raw_data_path, 'annotations')
+
+    if not os.path.exists(ucf101_rar_path):
+        download_file(ucf101_url, ucf101_rar_path)
+    if not os.path.exists(annotations_zip_path):
+        download_file(annotations_url, annotations_zip_path)
+
+    if not os.path.exists(ucf101_extract_path):
+        extract_rar(ucf101_rar_path, ucf101_extract_path)
+    if not os.path.exists(annotations_extract_path):
+        extract_zip(annotations_zip_path, annotations_extract_path)
+
+
+if __name__ == "__main__":
+    data_dir = '.'
+    prepare_ucf101_dataset(data_dir)
