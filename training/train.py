@@ -5,7 +5,7 @@ from torchvision.datasets import UCF101
 from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 from argparse import ArgumentParser
 
-from models.my_model import my_model
+from models.my_model import MyModel
 
 # ArgumentParser 설정
 parser = ArgumentParser()
@@ -16,7 +16,7 @@ parser.add_argument('--epochs', type=int, default=100)
 args = parser.parse_args()
 
 # 모델 초기화
-model = my_model(num_classes=101).cuda()
+model = MyModel(num_classes=101).cuda()
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
