@@ -35,7 +35,7 @@ transform = VideoTransform(
 
 # ArgumentParser 설정
 parser = ArgumentParser()
-parser.add_argument('--batch_size', type=int, default=8)
+parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--epochs', type=int, default=10)
 

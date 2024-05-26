@@ -6,7 +6,7 @@ import torchvision.models as models
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        imagemodel = models.efficientnet_b0(pretrained=False)
+        imagemodel = models.efficientnet_b4(pretrained=False)
         self.cnn = nn.Sequential(*list(imagemodel.children())[:-2])  # 마지막 두 레이어 제거 (AdaptiveAvgPool2d와 Linear 레이어)
 
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # Global Average Pooling 추가
