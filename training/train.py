@@ -47,8 +47,8 @@ criterion = torch.nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
 # 데이터셋과 데이터 로더 설정
-train_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/raw/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=True, transform=transform)
-test_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/raw/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=False, transform=transform)
+train_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=True, transform=transform)
+test_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=False, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
