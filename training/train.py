@@ -37,13 +37,13 @@ transform = VideoTransform(
 parser = ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=8)
 parser.add_argument('--lr', type=float, default=0.001)
-parser.add_argument('--epochs', type=int, default 100)
+parser.add_argument('--epochs', type=int, default=10)
 
 args = parser.parse_args()
 
 # 모델 초기화
 model = MyModel(num_classes=101).cuda()
-criterion = nn.CrossEntropyLoss()
+criterion = torch.nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
 # 데이터셋과 데이터 로더 설정
