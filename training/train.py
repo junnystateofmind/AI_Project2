@@ -23,6 +23,7 @@ class VideoTransform:
         for frame in video:
             if not isinstance(frame, torch.Tensor):
                 frame = self.to_tensor(frame)
+            frame = frame.float()  # 여기서 float 형식으로 변환
             frame = self.resize(frame)
             frame = self.normalize(frame)
             transformed_frames.append(frame)
