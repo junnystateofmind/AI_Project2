@@ -25,7 +25,7 @@ class VideoTransform:
                 frame = self.to_tensor(frame)
             frame = frame.float()  # 여기서 float 형식으로 변환
             frame = self.resize(frame)
-            frame = self.normalize(frame)
+            frame = self.normalize(frame.permute(2, 0, 1))  # (H, W, C) -> (C, H, W)
             transformed_frames.append(frame)
         return torch.stack(transformed_frames)
 
