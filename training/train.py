@@ -5,6 +5,7 @@ from torchvision.datasets import UCF101
 from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 from argparse import ArgumentParser
 
+
 from models.my_model import MyModel
 
 # ArgumentParser 설정
@@ -17,7 +18,7 @@ args = parser.parse_args()
 
 # 모델 초기화
 model = MyModel(num_classes=101).cuda()
-criterion = nn.CrossEntropyLoss()
+criterion = torch.nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
 # 데이터셋과 데이터 로더 설정
