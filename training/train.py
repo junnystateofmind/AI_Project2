@@ -27,8 +27,8 @@ transform = Compose([
     Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-train_dataset = UCF101(root='../data/UCF-101', annotation_path='../data/annotations/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=True, transform=transform)
-test_dataset = UCF101(root='../data/UCF-101', annotation_path='../data/annotations/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=False, transform=transform)
+train_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/annotations/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=True, transform=transform)
+test_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/annotations/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=False, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
