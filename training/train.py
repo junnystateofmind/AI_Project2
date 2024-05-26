@@ -21,11 +21,9 @@ class VideoTransform:
         # 비디오 텐서의 각 프레임에 대해 변환 적용
         transformed_frames = []
         for frame in video:
-            if not isinstance(frame, torch.Tensor):
-                frame = self.to_tensor(frame)
-            frame = frame.float()  # 여기서 float 형식으로 변환
+            frame = self.to_tensor(frame).float()  # float 타입으로 변환
             frame = self.resize(frame)
-            frame = self.normalize(frame.permute(2, 0, 1))  # (H, W, C) -> (C, H, W)
+            frame = self.normalize(frame)
             transformed_frames.append(frame)
         return torch.stack(transformed_frames)
 
