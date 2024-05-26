@@ -1,35 +1,54 @@
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision.datasets import UCF101
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 from argparse import ArgumentParser
 
-
 from models.my_model import MyModel
+from torchvision.transforms import Compose, Resize, ToTensor, Normalize
+
+class VideoTransform:
+    def __init__(self, resize, to_tensor, normalize):
+        self.resize = resize
+        self.to_tensor = to_tensor
+        self.normalize = normalize
+
+    def __call__(self, video):
+        # 비디오 텐서의 각 프레임에 대해 변환 적용
+        transformed_frames = []
+        for frame in video:
+            frame = self.resize(frame)
+            frame = self.to_tensor(frame)
+            frame = self.normalize(frame)
+            transformed_frames.append(frame)
+        return torch.stack(transformed_frames)
+
+transform = VideoTransform(
+    resize=Resize((224, 224)),
+    to_tensor=ToTensor(),
+    normalize=Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+)
 
 # ArgumentParser 설정
 parser = ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=8)
 parser.add_argument('--lr', type=float, default=0.001)
-parser.add_argument('--epochs', type=int, default=100)
+parser.add_argument('--epochs', type=int, default 100)
 
 args = parser.parse_args()
 
 # 모델 초기화
 model = MyModel(num_classes=101).cuda()
-criterion = torch.nn.CrossEntropyLoss()
+criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
 # 데이터셋과 데이터 로더 설정
-transform = Compose([
-    Resize((224, 224)),
-    ToTensor(),
-    Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
-
-train_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/annotations/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=True, transform=transform)
-test_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/annotations/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=False, transform=transform)
+train_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/raw/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=True, transform=transform)
+test_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/raw/ucfTrainTestlist', frames_per_clip=16, step_between_clips=1, fold=1, train=False, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
 test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
