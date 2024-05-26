@@ -12,16 +12,15 @@ from models.my_model import MyModel
 from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 
 class VideoTransform:
-    def __init__(self, resize, to_tensor, normalize):
+    def __init__(self, resize, normalize):
         self.resize = resize
-        self.to_tensor = to_tensor
         self.normalize = normalize
 
     def __call__(self, video):
         # 비디오 텐서의 각 프레임에 대해 변환 적용
         transformed_frames = []
         for frame in video:
-            frame = self.to_tensor(frame).float()  # float 타입으로 변환
+            frame = frame.float()  # float 타입으로 변환
             frame = self.resize(frame)
             frame = self.normalize(frame)
             transformed_frames.append(frame)
@@ -29,7 +28,6 @@ class VideoTransform:
 
 transform = VideoTransform(
     resize=Resize((224, 224)),
-    to_tensor=ToTensor(),
     normalize=Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 )
 
@@ -80,3 +78,4 @@ with torch.no_grad():
         correct += (predicted == labels).sum().item()
 
 print(f"Accuracy: {100 * correct / total} %")
+
