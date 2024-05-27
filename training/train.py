@@ -69,8 +69,10 @@ def main(args):
                           frames_per_clip=16, step_between_clips=1, fold=1, train=False, transform=transform)
 
     print("Creating data loaders...")
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=2,
+                              persistent_workers=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=2,
+                             persistent_workers=True)
 
     print("Initializing model...")
     model = MyModel(num_classes=101).to(device)
@@ -114,7 +116,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=64)  # 기본 배치 크기를 줄임
+    parser.add_argument('--batch_size', type=int, default=32)  # 기본 배치 크기를 줄임
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=10)
     args = parser.parse_args()
