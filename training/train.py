@@ -77,8 +77,20 @@ def main(args):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
-    # 데이터셋의 일부만 로드하여 확인
-    sample_data, sample_label = train_dataset[0]
+    # 데이터셋의 반환 값 확인
+    sample = train_dataset[0]
+    print(f"Sample type: {type(sample)}")
+    print(f"Sample length: {len(sample)}")
+
+    if len(sample) == 2:
+        sample_data, sample_label = sample
+    elif len(sample) == 3:
+        sample_data, _, sample_label = sample
+        sample_data = sample_data[:, :3, :, :]  # RGB 채널만 사용
+    else:
+        print(f"Unexpected sample format: {sample}")
+        return
+
     print("Sample data shape:", sample_data.shape)
     print("Sample label:", sample_label)
 
