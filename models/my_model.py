@@ -6,25 +6,30 @@ class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
         # EfficientNet-b4 모델 불러오기
-        imagemodel = models.efficientnet_b4(pretrained=False)
-        self.cnn = nn.Sequential(*list(imagemodel.children())[:-2])  # 마지막 두 레이어 제거 (AdaptiveAvgPool2d와 Linear 레이어)
-
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # Global Average Pooling 추가
-        self.lstm = nn.LSTM(input_size=1792, hidden_size=512, num_layers=2, batch_first=True)
+        imagemodel = models.efficientnet_b4(pretrained=False) # (batch_size, num_frames, 3, 224, 224) -> (batch_size, num_frames, 1792, 7, 7)
+        self.cnn = nn.Sequential(*list(imagemodel.children())[:-2]) # 마지막 두 레이어 제거
+        self.avgpool = nn.AdaptiveAvgPool2d(1) # Global Average Pooling, 이후 차원은 (batch_size, num_frames, 1792, 7, 7) -> (batch_size, num_frames, 1792, 1, 1)
+        self.lstm = nn.LSTM(1792, 512, 1, batch_first=True)
         self.fc = nn.Linear(512, num_classes)
 
     def forward(self, x):
-        batch_size, seq_length, c, h, w = x.size()
-        cnn_out = []
-        for t in range(seq_length):
-            with torch.no_grad():  # CNN 가중치를 고정시킴
-                c_out = self.cnn(x[:, t, :, :, :])
-                c_out = self.avgpool(c_out)  # Global Average Pooling 적용
-                c_out = c_out.view(batch_size, -1)
-            cnn_out.append(c_out)
+        batch_size, num_frames, c, h, w = x.size()
+        x = x.view(batch_size * num_frames, c, h, w)  # Reshape to (batch_size * num_frames, 3, 224, 224)
 
-        cnn_out = torch.stack(cnn_out, dim=1)
-        lstm_out, _ = self.lstm(cnn_out)
-        lstm_out = lstm_out[:, -1, :]  # LSTM의 마지막 출력을 가져옴
-        out = self.fc(lstm_out)
-        return out
+        # CNN 통과
+        x = self.cnn(x)  # (batch_size * num_frames, 1792, 7, 7)
+
+        # Global Average Pooling
+        x = self.avgpool(x)  # (batch_size * num_frames, 1792, 1, 1)
+        x = x.view(batch_size, num_frames, -1)  # (batch_size, num_frames, 1792)
+
+        # LSTM 통과
+        x, _ = self.lstm(x)  # (batch_size, num_frames, 512)
+
+        # 마지막 타임스텝 출력 사용
+        x = x[:, -1, :]  # (batch_size, 512)
+
+        # Fully Connected Layer 통과
+        x = self.fc(x)  # (batch_size, num_classes)
+
+        return x
