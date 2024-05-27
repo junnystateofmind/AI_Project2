@@ -8,7 +8,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision.datasets import UCF101
 from argparse import ArgumentParser
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize
+from torchvision.transforms import Compose, Resize, Normalize
 from models.my_model import MyModel
 from tqdm import tqdm
 
