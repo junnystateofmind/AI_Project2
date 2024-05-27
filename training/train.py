@@ -15,11 +15,15 @@ from tqdm import tqdm
 
 class FrameNormalize:
     def __init__(self, mean, std):
-        self.normalize = Normalize(mean, std)
+        self.mean = mean
+        self.std = std
 
     def __call__(self, video):
         video = video.float()  # Convert to float
-        return torch.stack([self.normalize(frame) for frame in video])
+        for t in video:  # 각 프레임을 순회하며 정규화
+            for c, (mean, std) in enumerate(zip(self.mean, self.std)):
+                t[c, :, :].sub_(mean).div_(std)
+        return video
 
 
 def train_one_epoch(model, criterion, optimizer, data_loader, device):
