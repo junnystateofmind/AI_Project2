@@ -19,6 +19,7 @@ class FrameNormalize:
 
     def __call__(self, video):
         # 비디오의 각 프레임에 대해 정규화를 적용합니다.
+        video = video.float()  # float 타입으로 변환
         return torch.stack([self.normalize(frame) for frame in video])
 
 
