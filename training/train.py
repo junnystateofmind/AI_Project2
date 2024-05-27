@@ -8,7 +8,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision.datasets import UCF101
 from argparse import ArgumentParser
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize
+from torchvision.transforms import Compose, Resize, Normalize
 from models.my_model import MyModel
 from tqdm import tqdm
 
@@ -55,7 +55,6 @@ def main(args):
 
     transform = Compose([
         Resize((224, 224)),
-        ToTensor(),  # ToTensor 추가
         FrameNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
@@ -66,10 +65,8 @@ def main(args):
                           frames_per_clip=16, step_between_clips=1, fold=1, train=False, transform=transform)
 
     print("Creating data loaders...")
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
-                              num_workers=0)  # num_workers를 0으로 설정
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,
-                             num_workers=0)  # num_workers를 0으로 설정
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
     print("Initializing model...")
     model = MyModel(num_classes=101).to(device)
