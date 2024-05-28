@@ -29,7 +29,14 @@ class FrameNormalize:
 def train_one_epoch(model, criterion, optimizer, data_loader, device):
     model.train()
     running_loss = 0.0
-    for inputs, labels in tqdm(data_loader, desc="Training"):
+    for sample in tqdm(data_loader, desc="Training"):
+        if len(sample) == 2:
+            inputs, labels = sample
+        elif len(sample) == 3:
+            inputs, _, labels = sample
+        else:
+            raise ValueError("Unexpected number of elements in sample")
+
         inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
         outputs = model(inputs)
@@ -45,7 +52,14 @@ def evaluate(model, data_loader, device):
     correct = 0
     total = 0
     with torch.no_grad():
-        for inputs, labels in tqdm(data_loader, desc="Evaluating"):
+        for sample in tqdm(data_loader, desc="Evaluating"):
+            if len(sample) == 2:
+                inputs, labels = sample
+            elif len(sample) == 3:
+                inputs, _, labels = sample
+            else:
+                raise ValueError("Unexpected number of elements in sample")
+
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
@@ -114,7 +128,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=16)  # 기본 배치 크기를 줄임
+    parser.add_argument('--batch_size', type=int, default=8)  # 기본 배치 크기를 더 줄임
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=10)
     args = parser.parse_args()
