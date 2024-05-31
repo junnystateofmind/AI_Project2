@@ -35,17 +35,24 @@ def custom_collate_fn(batch):
     return videos, labels
 
 
-def train_one_epoch(model, criterion, optimizer, data_loader, device):
+def train_one_epoch(model, criterion, optimizer, data_loader, device, accumulation_steps=2):
     model.train()
     running_loss = 0.0
-    for inputs, labels in tqdm(data_loader, desc="Training"):
+    optimizer.zero_grad()
+
+    for i, (inputs, labels) in enumerate(tqdm(data_loader, desc="Training")):
         inputs, labels = inputs.to(device), labels.to(device)
-        optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, labels)
+
         loss.backward()
-        optimizer.step()
+
+        if (i + 1) % accumulation_steps == 0:
+            optimizer.step()
+            optimizer.zero_grad()
+
         running_loss += loss.item()
+
     return running_loss / len(data_loader)
 
 
@@ -125,11 +132,11 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=4)  # 배치 크기를 줄임
+    parser.add_argument('--batch_size', type=int, default=1)  # Smaller batch size
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--num_workers', type=int, default=1)  # 워커 수를 줄임
-    parser.add_argument('--pin_memory', type=bool, default=False)  # pin_memory 비활성화
+    parser.add_argument('--num_workers', type=int, default=1)
+    parser.add_argument('--pin_memory', type=bool, default=False)
     args = parser.parse_args()
 
     main(args)

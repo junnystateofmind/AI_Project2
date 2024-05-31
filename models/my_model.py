@@ -6,7 +6,6 @@ from torchvision import models
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        # EfficientNet-B0 모델 불러오기
         self.efficientnet = models.efficientnet_b0(weights=None)
         self.efficientnet.classifier = nn.Identity()  # Remove the final classifier layer
         self.lstm = nn.LSTM(1280, 512, batch_first=True)
@@ -14,26 +13,24 @@ class MyModel(nn.Module):
 
     def forward(self, x):
         batch_size, num_segments, num_frames, channels, height, width = x.size()
-        # Reshape to (batch_size * num_segments * num_frames * 80, 3, height, width)
-        x = x.view(-1, 3, height, width)
+        x = x.view(-1, channels, height, width)  # Reshape to (batch_size * num_segments * num_frames, 3, height, width)
 
-        # Process each channel with EfficientNet-B0
-        cnn_features = self.efficientnet(x)  # Output shape: (batch_size * num_segments * num_frames * 80, 1280)
+        cnn_features = self.efficientnet(x)  # (batch_size * num_segments * num_frames, 1280)
 
-        # Reshape to (batch_size * num_segments * num_frames, 80, 1280)
-        cnn_features = cnn_features.view(batch_size * num_segments * num_frames, -1, 1280)
+        cnn_features = cnn_features.view(batch_size * num_segments, num_frames,
+                                         -1)  # (batch_size * num_segments, num_frames, 1280)
 
-        # Aggregate the features from 80 channels using mean
-        aggregated_features = torch.mean(cnn_features, dim=1)  # Shape: (batch_size * num_segments * num_frames, 1280)
+        aggregated_features = cnn_features.mean(dim=1)  # Aggregate features (batch_size * num_segments, 1280)
 
-        # Reshape to (batch_size, num_segments * num_frames, 1280)
-        aggregated_features = aggregated_features.view(batch_size, num_segments * num_frames, 1280)
+        aggregated_features = aggregated_features.view(batch_size, num_segments, -1)  # (batch_size, num_segments, 1280)
 
-        # LSTM
-        lstm_output, _ = self.lstm(aggregated_features)  # Shape: (batch_size, num_segments * num_frames, 512)
+        lstm_output, _ = self.lstm(aggregated_features)  # (batch_size, num_segments, 512)
 
-        # Average pooling over frames
-        lstm_output = lstm_output.mean(dim=1)  # Shape: (batch_size, 512)
+        lstm_output = lstm_output.mean(dim=1)  # (batch_size, 512)
+
+        output = self.fc(lstm_output)  # (batch_size, num_classes)
+
+        return output
 
 
 from torchsummary import summary
