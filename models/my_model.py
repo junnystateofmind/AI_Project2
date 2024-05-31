@@ -1,59 +1,40 @@
 import torch
 import torch.nn as nn
-import torchvision.models as models
+from torchvision import models
 
 
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        # EfficientNet-b4 model for RGB
-        rgb_model = models.efficientnet_b0(weights=None)
-        self.rgb_cnn = nn.Sequential(*list(rgb_model.children())[:-2])
-
-        # EfficientNet-b4 model for Optical Flow
-        flow_model = models.efficientnet_b0(weights=None)
-        self.flow_cnn = nn.Sequential(*list(flow_model.children())[:-2])
-
-        self.avgpool = nn.AdaptiveAvgPool2d(1)  # Global Average Pooling
-        self.lstm = nn.LSTM(3584, 512, 1, batch_first=True)  # Concatenated features from both CNNs
+        # EfficientNet-B0 모델 불러오기
+        self.efficientnet = models.efficientnet_b0(weights=None)
+        self.efficientnet.classifier = nn.Identity()  # Remove the final classifier layer
+        self.lstm = nn.LSTM(1280, 512, batch_first=True)
         self.fc = nn.Linear(512, num_classes)
 
     def forward(self, x):
-        print(f"Input shape: {x.shape}")  # Debugging print statement
+        batch_size, num_segments, num_frames, channels, height, width = x.size()
+        # Reshape to (batch_size * num_segments * num_frames * 80, 3, height, width)
+        x = x.view(-1, 3, height, width)
 
-        batch_size, num_segments, num_frames, c, h, w = x.size()
+        # Process each channel with EfficientNet-B0
+        cnn_features = self.efficientnet(x)  # Output shape: (batch_size * num_segments * num_frames * 80, 1280)
 
-        # Split channels into RGB and Optical Flow
-        rgb_data = x[:, :, :, :3, :, :].contiguous()  # (batch_size, num_segments, num_frames, 3, h, w)
-        flow_data = x[:, :, :, 3:, :, :].contiguous()  # (batch_size, num_segments, num_frames, 237, h, w)
+        # Reshape to (batch_size * num_segments * num_frames, 80, 1280)
+        cnn_features = cnn_features.view(batch_size * num_segments * num_frames, -1, 1280)
 
-        # Reshape for CNN input
-        rgb_data = rgb_data.view(-1, 3, h, w)  # (batch_size * num_segments * num_frames, 3, h, w)
-        flow_data = flow_data.view(-1, 237, h, w)  # (batch_size * num_segments * num_frames, 237, h, w)
+        # Aggregate the features from 80 channels using mean
+        aggregated_features = torch.mean(cnn_features, dim=1)  # Shape: (batch_size * num_segments * num_frames, 1280)
 
-        # Process through respective CNNs
-        rgb_features = self.rgb_cnn(rgb_data)  # (batch_size * num_segments * num_frames, 1792, 7, 7)
-        flow_features = self.flow_cnn(flow_data)  # (batch_size * num_segments * num_frames, 1792, 7, 7)
-
-        # Global Average Pooling
-        rgb_features = self.avgpool(rgb_features).view(batch_size, num_segments * num_frames,
-                                                       -1)  # (batch_size, num_segments * num_frames, 1792)
-        flow_features = self.avgpool(flow_features).view(batch_size, num_segments * num_frames,
-                                                         -1)  # (batch_size, num_segments * num_frames, 1792)
-
-        # Concatenate RGB and Optical Flow features
-        features = torch.cat((rgb_features, flow_features), dim=2)  # (batch_size, num_segments * num_frames, 3584)
+        # Reshape to (batch_size, num_segments * num_frames, 1280)
+        aggregated_features = aggregated_features.view(batch_size, num_segments * num_frames, 1280)
 
         # LSTM
-        x, _ = self.lstm(features)  # (batch_size, num_segments * num_frames, 512)
+        lstm_output, _ = self.lstm(aggregated_features)  # Shape: (batch_size, num_segments * num_frames, 512)
 
-        # Global Average Pooling over the time dimension
-        x = x.mean(dim=1)  # (batch_size, 512)
+        # Average pooling over frames
+        lstm_output = lstm_output.mean(dim=1)  # Shape: (batch_size, 512)
 
-        # Fully Connected Layer
-        x = self.fc(x)  # (batch_size, num_classes)
-
-        return x
 
 from torchsummary import summary
 # 모델 인스턴스 생성
