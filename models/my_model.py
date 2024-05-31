@@ -1,37 +1,52 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from torchinfo import summary
 
 
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        # EfficientNet-b4 모델 불러오기
-        imagemodel = models.efficientnet_b4(weights=None)
-        self.cnn = nn.Sequential(*list(imagemodel.children())[:-2])  # 마지막 두 레이어 제거
-        self.avgpool = nn.AdaptiveAvgPool2d(1)  # Global Average Pooling, 이후 차원은 (batch_size, 1792, 1, 1)
-        self.lstm = nn.LSTM(1792, 512, 1, batch_first=True)
+        # EfficientNet-b4 model for RGB
+        rgb_model = models.efficientnet_b4(weights=None)
+        self.rgb_cnn = nn.Sequential(*list(rgb_model.children())[:-2])
+
+        # EfficientNet-b4 model for Optical Flow
+        flow_model = models.efficientnet_b4(weights=None)
+        self.flow_cnn = nn.Sequential(*list(flow_model.children())[:-2])
+
+        self.avgpool = nn.AdaptiveAvgPool2d(1)  # Global Average Pooling
+        self.lstm = nn.LSTM(3584, 512, 1, batch_first=True)  # Concatenated features from both CNNs
         self.fc = nn.Linear(512, num_classes)
 
     def forward(self, x):
         batch_size, num_frames, c, h, w = x.size()
-        x = x.view(batch_size * num_frames, c, h, w)  # Reshape to (batch_size * num_frames, 3, 224, 224)
 
-        # CNN 통과
-        x = self.cnn(x)  # (batch_size * num_frames, 1792, 7, 7)
+        # Split channels into RGB and Optical Flow
+        rgb_data = x[:, :, :3, :, :]  # (batch_size, num_frames, 3, h, w)
+        flow_data = x[:, :, 3:, :, :]  # (batch_size, num_frames, 237, h, w)
+
+        # Reshape for CNN input
+        rgb_data = rgb_data.view(batch_size * num_frames, 3, h, w)
+        flow_data = flow_data.view(batch_size * num_frames, 237, h, w)
+
+        # Process through respective CNNs
+        rgb_features = self.rgb_cnn(rgb_data)  # (batch_size * num_frames, 1792, 7, 7)
+        flow_features = self.flow_cnn(flow_data)  # (batch_size * num_frames, 1792, 7, 7)
 
         # Global Average Pooling
-        x = self.avgpool(x)  # (batch_size * num_frames, 1792, 1, 1)
-        x = x.view(batch_size, num_frames, -1)  # (batch_size, num_frames, 1792)
+        rgb_features = self.avgpool(rgb_features).view(batch_size, num_frames, -1)  # (batch_size, num_frames, 1792)
+        flow_features = self.avgpool(flow_features).view(batch_size, num_frames, -1)  # (batch_size, num_frames, 1792)
 
-        # LSTM 통과
-        x, _ = self.lstm(x)  # (batch_size, num_frames, 512)
+        # Concatenate RGB and Optical Flow features
+        features = torch.cat((rgb_features, flow_features), dim=2)  # (batch_size, num_frames, 3584)
 
-        # LSTM 출력에 대해 Global Average Pooling 적용
+        # LSTM
+        x, _ = self.lstm(features)  # (batch_size, num_frames, 512)
+
+        # Global Average Pooling over the time dimension
         x = x.mean(dim=1)  # (batch_size, 512)
 
-        # Fully Connected Layer 통과
+        # Fully Connected Layer
         x = self.fc(x)  # (batch_size, num_classes)
 
         return x
