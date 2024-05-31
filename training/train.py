@@ -12,7 +12,6 @@ from torchvision.transforms import Compose, Resize, Normalize
 from models.my_model import MyModel
 from tqdm import tqdm
 
-
 class FrameNormalize:
     def __init__(self, mean, std):
         self.mean = mean
@@ -25,7 +24,6 @@ class FrameNormalize:
                 t[c, :, :].sub_(mean).div_(std)
         return video
 
-
 def custom_collate_fn(batch):
     # 비디오와 레이블만 남기고 나머지 요소는 무시
     videos = [item[0] for item in batch]
@@ -34,27 +32,18 @@ def custom_collate_fn(batch):
     labels = torch.tensor(labels)
     return videos, labels
 
-
-def train_one_epoch(model, criterion, optimizer, data_loader, device, accumulation_steps=2):
+def train_one_epoch(model, criterion, optimizer, data_loader, device):
     model.train()
     running_loss = 0.0
-    optimizer.zero_grad()
-
-    for i, (inputs, labels) in enumerate(tqdm(data_loader, desc="Training")):
+    for inputs, labels in tqdm(data_loader, desc="Training"):
         inputs, labels = inputs.to(device), labels.to(device)
+        optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, labels)
-
         loss.backward()
-
-        if (i + 1) % accumulation_steps == 0:
-            optimizer.step()
-            optimizer.zero_grad()
-
+        optimizer.step()
         running_loss += loss.item()
-
     return running_loss / len(data_loader)
-
 
 def evaluate(model, data_loader, device):
     model.eval()
@@ -68,7 +57,6 @@ def evaluate(model, data_loader, device):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     return 100 * correct / total
-
 
 def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -104,7 +92,7 @@ def main(args):
         sample_data, sample_label = sample
     elif len(sample) == 3:
         sample_data, _, sample_label = sample
-        sample_data = sample_data[:, :, :3, :, :]  # RGB 채널만 사용
+        sample_data = sample_data[:, :3, :, :]  # RGB 채널만 사용
     else:
         print(f"Unexpected sample format: {sample}")
         return
@@ -129,14 +117,13 @@ def main(args):
 
     print("Training complete. Best accuracy: {:.2f}%".format(best_accuracy))
 
-
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=1)  # Smaller batch size
+    parser.add_argument('--batch_size', type=int, default=4)  # 배치 크기를 줄임
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--num_workers', type=int, default=1)
-    parser.add_argument('--pin_memory', type=bool, default=False)
+    parser.add_argument('--num_workers', type=int, default=1)  # 워커 수를 줄임
+    parser.add_argument('--pin_memory', type=bool, default=False)  # pin_memory 비활성화
     args = parser.parse_args()
 
     main(args)
