@@ -2,33 +2,62 @@ import torch
 import torch.nn as nn
 from torchvision import models
 
+# class MyModel(nn.Module):
+#     def __init__(self, num_classes=101):
+#         super(MyModel, self).__init__()
+#         self.efficientnet = models.efficientnet_b0(weights=None)
+#         self.efficientnet.classifier = nn.Identity()  # 최종 분류 레이어 제거
+#         self.reduce_channels = nn.Conv2d(1280, 512, kernel_size=1)  # 채널 수 줄이기
+#         self.lstm = nn.LSTM(512, 256, batch_first=True)  # LSTM 입력 크기 조정
+#         self.fc = nn.Linear(256, num_classes)
+#
+#     def forward(self, x):
+#         batch_size, num_segments, num_frames, channels, height, width = x.size()
+#         x = x.view(-1, channels, height, width)  # (batch_size * num_segments * num_frames, 3, height, width)
+#
+#         cnn_features = self.efficientnet(x)  # (batch_size * num_segments * num_frames, 1280)
+#         cnn_features = self.reduce_channels(cnn_features)  # (batch_size * num_segments * num_frames, 512, H, W)
+#         cnn_features = cnn_features.mean([2, 3])  # Global Average Pooling (batch_size * num_segments * num_frames, 512)
+#
+#         cnn_features = cnn_features.view(batch_size * num_segments, num_frames, -1)  # (batch_size * num_segments, num_frames, 512)
+#         aggregated_features = cnn_features.mean(dim=1)  # (batch_size * num_segments, 512)
+#
+#         aggregated_features = aggregated_features.view(batch_size, num_segments, -1)  # (batch_size, num_segments, 512)
+#         lstm_output, _ = self.lstm(aggregated_features)  # (batch_size, num_segments, 256)
+#         lstm_output = lstm_output.mean(dim=1)  # (batch_size, 256)
+#
+#         output = self.fc(lstm_output)  # (batch_size, num_classes)
+#         return output
+
+# CNN 기반 모델
+import torch.nn.functional as F
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        self.efficientnet = models.efficientnet_b0(weights=None)
-        self.efficientnet.classifier = nn.Identity()  # 최종 분류 레이어 제거
-        self.reduce_channels = nn.Conv2d(1280, 512, kernel_size=1)  # 채널 수 줄이기
-        self.lstm = nn.LSTM(512, 256, batch_first=True)  # LSTM 입력 크기 조정
-        self.fc = nn.Linear(256, num_classes)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.lstm = nn.LSTM(256 * 28 * 28, 512, batch_first=True)
+        self.fc = nn.Linear(512, num_classes)
 
     def forward(self, x):
         batch_size, num_segments, num_frames, channels, height, width = x.size()
         x = x.view(-1, channels, height, width)  # (batch_size * num_segments * num_frames, 3, height, width)
 
-        cnn_features = self.efficientnet(x)  # (batch_size * num_segments * num_frames, 1280)
-        cnn_features = self.reduce_channels(cnn_features)  # (batch_size * num_segments * num_frames, 512, H, W)
-        cnn_features = cnn_features.mean([2, 3])  # Global Average Pooling (batch_size * num_segments * num_frames, 512)
+        x = self.pool(F.relu(self.conv1(x)))  # (batch_size * num_segments * num_frames, 64, height/2, width/2)
+        x = self.pool(F.relu(self.conv2(x)))  # (batch_size * num_segments * num_frames, 128, height/4, width/4)
+        x = self.pool(F.relu(self.conv3(x)))  # (batch_size * num_segments * num_frames, 256, height/8, width/8)
 
-        cnn_features = cnn_features.view(batch_size * num_segments, num_frames, -1)  # (batch_size * num_segments, num_frames, 512)
-        aggregated_features = cnn_features.mean(dim=1)  # (batch_size * num_segments, 512)
+        x = x.view(batch_size * num_segments, num_frames, -1)  # (batch_size * num_segments, num_frames, 256 * 28 * 28)
+        x = x.mean(dim=1)  # (batch_size * num_segments, 256 * 28 * 28)
 
-        aggregated_features = aggregated_features.view(batch_size, num_segments, -1)  # (batch_size, num_segments, 512)
-        lstm_output, _ = self.lstm(aggregated_features)  # (batch_size, num_segments, 256)
-        lstm_output = lstm_output.mean(dim=1)  # (batch_size, 256)
+        x = x.view(batch_size, num_segments, -1)  # (batch_size, num_segments, 256 * 28 * 28)
+        lstm_output, _ = self.lstm(x)  # (batch_size, num_segments, 512)
+        lstm_output = lstm_output.mean(dim=1)  # (batch_size, 512)
 
         output = self.fc(lstm_output)  # (batch_size, num_classes)
         return output
-
 
 from torchsummary import summary
 # 모델 인스턴스 생성
