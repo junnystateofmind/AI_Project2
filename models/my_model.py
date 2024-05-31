@@ -3,16 +3,15 @@ import torch.nn as nn
 import torchvision.models as models
 from torchsummary import summary
 
-
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
         # EfficientNet-b4 model for RGB
-        rgb_model = models.efficientnet_b0(weights=None)
+        rgb_model = models.efficientnet_b4(weights=None)
         self.rgb_cnn = nn.Sequential(*list(rgb_model.children())[:-2])
 
         # EfficientNet-b4 model for Optical Flow
-        flow_model = models.efficientnet_b0(weights=None)
+        flow_model = models.efficientnet_b4(weights=None)
         self.flow_cnn = nn.Sequential(*list(flow_model.children())[:-2])
 
         self.avgpool = nn.AdaptiveAvgPool2d(1)  # Global Average Pooling
@@ -20,6 +19,8 @@ class MyModel(nn.Module):
         self.fc = nn.Linear(512, num_classes)
 
     def forward(self, x):
+        print(f"Input shape: {x.shape}")  # Debugging print statement
+
         batch_size, num_frames, c, h, w = x.size()
 
         # Split channels into RGB and Optical Flow
