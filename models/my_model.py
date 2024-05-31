@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-from torchsummary import summary
+
 
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
@@ -21,29 +21,31 @@ class MyModel(nn.Module):
     def forward(self, x):
         print(f"Input shape: {x.shape}")  # Debugging print statement
 
-        batch_size, num_frames, c, h, w = x.size()
+        batch_size, num_segments, num_frames, c, h, w = x.size()
 
         # Split channels into RGB and Optical Flow
-        rgb_data = x[:, :, :3, :, :]  # (batch_size, num_frames, 3, h, w)
-        flow_data = x[:, :, 3:, :, :]  # (batch_size, num_frames, 237, h, w)
+        rgb_data = x[:, :, :, :3, :, :].contiguous()  # (batch_size, num_segments, num_frames, 3, h, w)
+        flow_data = x[:, :, :, 3:, :, :].contiguous()  # (batch_size, num_segments, num_frames, 237, h, w)
 
         # Reshape for CNN input
-        rgb_data = rgb_data.view(batch_size * num_frames, 3, h, w)
-        flow_data = flow_data.view(batch_size * num_frames, 237, h, w)
+        rgb_data = rgb_data.view(-1, 3, h, w)  # (batch_size * num_segments * num_frames, 3, h, w)
+        flow_data = flow_data.view(-1, 237, h, w)  # (batch_size * num_segments * num_frames, 237, h, w)
 
         # Process through respective CNNs
-        rgb_features = self.rgb_cnn(rgb_data)  # (batch_size * num_frames, 1792, 7, 7)
-        flow_features = self.flow_cnn(flow_data)  # (batch_size * num_frames, 1792, 7, 7)
+        rgb_features = self.rgb_cnn(rgb_data)  # (batch_size * num_segments * num_frames, 1792, 7, 7)
+        flow_features = self.flow_cnn(flow_data)  # (batch_size * num_segments * num_frames, 1792, 7, 7)
 
         # Global Average Pooling
-        rgb_features = self.avgpool(rgb_features).view(batch_size, num_frames, -1)  # (batch_size, num_frames, 1792)
-        flow_features = self.avgpool(flow_features).view(batch_size, num_frames, -1)  # (batch_size, num_frames, 1792)
+        rgb_features = self.avgpool(rgb_features).view(batch_size, num_segments * num_frames,
+                                                       -1)  # (batch_size, num_segments * num_frames, 1792)
+        flow_features = self.avgpool(flow_features).view(batch_size, num_segments * num_frames,
+                                                         -1)  # (batch_size, num_segments * num_frames, 1792)
 
         # Concatenate RGB and Optical Flow features
-        features = torch.cat((rgb_features, flow_features), dim=2)  # (batch_size, num_frames, 3584)
+        features = torch.cat((rgb_features, flow_features), dim=2)  # (batch_size, num_segments * num_frames, 3584)
 
         # LSTM
-        x, _ = self.lstm(features)  # (batch_size, num_frames, 512)
+        x, _ = self.lstm(features)  # (batch_size, num_segments * num_frames, 512)
 
         # Global Average Pooling over the time dimension
         x = x.mean(dim=1)  # (batch_size, 512)
@@ -53,6 +55,7 @@ class MyModel(nn.Module):
 
         return x
 
+from torchsummary import summary
 # 모델 인스턴스 생성
 model = MyModel(num_classes=101)
 

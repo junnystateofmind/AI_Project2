@@ -97,7 +97,7 @@ def main(args):
         sample_data, sample_label = sample
     elif len(sample) == 3:
         sample_data, _, sample_label = sample
-        sample_data = sample_data[:, :3, :, :]  # RGB 채널만 사용
+        sample_data = sample_data[:, :, :3, :, :]  # RGB 채널만 사용
     else:
         print(f"Unexpected sample format: {sample}")
         return
