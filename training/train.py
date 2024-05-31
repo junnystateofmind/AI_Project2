@@ -26,17 +26,19 @@ class FrameNormalize:
         return video
 
 
+def custom_collate_fn(batch):
+    # 비디오와 레이블만 남기고 나머지 요소는 무시
+    videos = [item[0] for item in batch]
+    labels = [item[2] for item in batch]
+    videos = torch.stack(videos)
+    labels = torch.tensor(labels)
+    return videos, labels
+
+
 def train_one_epoch(model, criterion, optimizer, data_loader, device):
     model.train()
     running_loss = 0.0
-    for sample in tqdm(data_loader, desc="Training"):
-        if len(sample) == 2:
-            inputs, labels = sample
-        elif len(sample) == 3:
-            inputs, _, labels = sample
-        else:
-            raise ValueError("Unexpected number of elements in sample")
-
+    for inputs, labels in tqdm(data_loader, desc="Training"):
         inputs, labels = inputs.to(device), labels.to(device)
         optimizer.zero_grad()
         outputs = model(inputs)
@@ -52,14 +54,7 @@ def evaluate(model, data_loader, device):
     correct = 0
     total = 0
     with torch.no_grad():
-        for sample in tqdm(data_loader, desc="Evaluating"):
-            if len(sample) == 2:
-                inputs, labels = sample
-            elif len(sample) == 3:
-                inputs, _, labels = sample
-            else:
-                raise ValueError("Unexpected number of elements in sample")
-
+        for inputs, labels in tqdm(data_loader, desc="Evaluating"):
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
@@ -83,8 +78,10 @@ def main(args):
                           frames_per_clip=16, step_between_clips=1, fold=1, train=False, transform=transform)
 
     print("Creating data loaders...")
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=0)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=0)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
+                              collate_fn=custom_collate_fn, pin_memory=args.pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
+                             collate_fn=custom_collate_fn, pin_memory=args.pin_memory)
 
     print("Initializing model...")
     model = MyModel(num_classes=101).to(device)
@@ -128,9 +125,11 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=8)  # 기본 배치 크기를 더 줄임
+    parser.add_argument('--batch_size', type=int, default=4)  # 배치 크기를 줄임
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--num_workers', type=int, default=1)  # 워커 수를 줄임
+    parser.add_argument('--pin_memory', type=bool, default=False)  # pin_memory 비활성화
     args = parser.parse_args()
 
     main(args)
