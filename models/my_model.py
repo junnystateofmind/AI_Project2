@@ -7,25 +7,24 @@ class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
         self.efficientnet = models.efficientnet_b0(weights=None)
-        self.efficientnet.classifier = nn.Identity()  # Remove the final classifier layer
+        self.efficientnet.classifier = nn.Identity()  # 마지막 분류기 레이어 제거
         self.lstm = nn.LSTM(1280, 512, batch_first=True)
         self.fc = nn.Linear(512, num_classes)
 
     def forward(self, x):
-        batch_size, num_segments, num_frames, channels, height, width = x.size()
+        batch_size, num_frames, channels, height, width = x.size()
 
-        # 채널 병합: (batch_size, num_segments, num_frames, channels, height, width) -> (batch_size, num_segments * num_frames * channels, height, width)
-        x = x.view(batch_size, num_segments * num_frames * channels, height, width)
+        # (batch_size, num_frames, channels, height, width) -> (batch_size * num_frames, channels, height, width)
+        x = x.view(-1, channels, height, width)
 
         # CNN 통과
-        cnn_features = self.efficientnet(x)  # (batch_size, num_segments * num_frames * channels, 1280)
+        cnn_features = self.efficientnet(x)  # (batch_size * num_frames, 1280)
 
-        # Global Average Pooling
-        cnn_features = cnn_features.view(batch_size, num_segments, num_frames, -1).mean(
-            dim=2)  # (batch_size, num_segments, 1280)
+        # (batch_size, num_frames, 1280)로 변환
+        cnn_features = cnn_features.view(batch_size, num_frames, -1)
 
         # LSTM 통과
-        lstm_output, _ = self.lstm(cnn_features)  # (batch_size, num_segments, 512)
+        lstm_output, _ = self.lstm(cnn_features)  # (batch_size, num_frames, 512)
 
         # LSTM 출력에 대해 Global Average Pooling 적용
         lstm_output = lstm_output.mean(dim=1)  # (batch_size, 512)
