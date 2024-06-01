@@ -1,6 +1,5 @@
-import sys
 import os
-
+import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import torch
@@ -11,6 +10,7 @@ from argparse import ArgumentParser
 from torchvision.transforms import Compose, Resize, Normalize
 from models.my_model import MyModel
 from tqdm import tqdm
+from torchinfo import summary
 
 class FrameNormalize:
     def __init__(self, mean, std):
@@ -25,18 +25,24 @@ class FrameNormalize:
         return video
 
 def custom_collate_fn(batch):
-    # 비디오와 레이블만 남기고 나머지 요소는 무시
     videos = [item[0] for item in batch]
     labels = [item[2] for item in batch]
     videos = torch.stack(videos)
     labels = torch.tensor(labels)
     return videos, labels
 
+def combine_optical_flow_channels(video):
+    # Optical Flow 채널을 3채널로 병합
+    B, T, C, H, W = video.size()
+    video = video.view(B, T, 80, 3, H, W).mean(dim=2)
+    return video
+
 def train_one_epoch(model, criterion, optimizer, data_loader, device):
     model.train()
     running_loss = 0.0
     for inputs, labels in tqdm(data_loader, desc="Training"):
         inputs, labels = inputs.to(device), labels.to(device)
+        inputs = combine_optical_flow_channels(inputs)  # 채널 병합
         optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, labels)
@@ -52,6 +58,7 @@ def evaluate(model, data_loader, device):
     with torch.no_grad():
         for inputs, labels in tqdm(data_loader, desc="Evaluating"):
             inputs, labels = inputs.to(device), labels.to(device)
+            inputs = combine_optical_flow_channels(inputs)  # 채널 병합
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -80,25 +87,9 @@ def main(args):
 
     print("Initializing model...")
     model = MyModel(num_classes=101).to(device)
+    summary(model, input_size=(args.batch_size, 16, 240, 224, 224), device=device.type)
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
-
-    # 데이터셋의 반환 값 확인
-    sample = train_dataset[0]
-    print(f"Sample type: {type(sample)}")
-    print(f"Sample length: {len(sample)}")
-
-    if len(sample) == 2:
-        sample_data, sample_label = sample
-    elif len(sample) == 3:
-        sample_data, _, sample_label = sample
-        sample_data = sample_data[:, :3, :, :]  # RGB 채널만 사용
-    else:
-        print(f"Unexpected sample format: {sample}")
-        return
-
-    print("Sample data shape:", sample_data.shape)
-    print("Sample label:", sample_label)
 
     best_accuracy = 0.0
     for epoch in range(args.epochs):
@@ -119,11 +110,11 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=4)  # 배치 크기를 줄임
+    parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--num_workers', type=int, default=1)  # 워커 수를 줄임
-    parser.add_argument('--pin_memory', type=bool, default=False)  # pin_memory 비활성화
+    parser.add_argument('--num_workers', type=int, default=1)
+    parser.add_argument('--pin_memory', type=bool, default=False)
     args = parser.parse_args()
 
     main(args)
