@@ -87,7 +87,6 @@ def main(args):
 
     print("Initializing model...")
     model = MyModel(num_classes=101).to(device)
-    summary(model, input_size=(args.batch_size, 16, 240, 224, 224), device=device.type)
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
