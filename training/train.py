@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import torch
 import torch.optim as optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import UCF101
 from argparse import ArgumentParser
 from torchvision.transforms import Compose, Resize, Normalize
@@ -18,8 +18,8 @@ class FrameNormalize:
         self.std = std
 
     def __call__(self, video):
-        video = video.float()  # Convert to float
-        for t in video:  # 각 프레임을 순회하며 정규화
+        video = video.float()
+        for t in video:
             for c, (mean, std) in enumerate(zip(self.mean, self.std)):
                 t[c, :, :].sub_(mean).div_(std)
         return video
@@ -32,7 +32,6 @@ def custom_collate_fn(batch):
     return videos, labels
 
 def combine_optical_flow_channels(video):
-    # Optical Flow 채널을 3채널로 병합
     B, T, C, H, W = video.size()
     video = video.view(B, T, 80, 3, H, W).mean(dim=2)
     return video
@@ -42,7 +41,7 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device):
     running_loss = 0.0
     for inputs, labels in tqdm(data_loader, desc="Training"):
         inputs, labels = inputs.to(device), labels.to(device)
-        inputs = combine_optical_flow_channels(inputs)  # 채널 병합
+        inputs = combine_optical_flow_channels(inputs)
         optimizer.zero_grad()
         outputs = model(inputs)
         loss = criterion(outputs, labels)
@@ -58,7 +57,7 @@ def evaluate(model, data_loader, device):
     with torch.no_grad():
         for inputs, labels in tqdm(data_loader, desc="Evaluating"):
             inputs, labels = inputs.to(device), labels.to(device)
-            inputs = combine_optical_flow_channels(inputs)  # 채널 병합
+            inputs = combine_optical_flow_channels(inputs)
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -74,10 +73,11 @@ def main(args):
     ])
 
     print("Loading datasets...")
-    train_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/annotations/ucfTrainTestlist',
-                           frames_per_clip=16, step_between_clips=1, fold=1, train=True, transform=transform)
-    test_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/annotations/ucfTrainTestlist',
-                          frames_per_clip=16, step_between_clips=1, fold=1, train=False, transform=transform)
+    full_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/annotations/ucfTrainTestlist',
+                          frames_per_clip=16, step_between_clips=1, fold=1, train=True, transform=transform)
+    train_size = int(0.8 * len(full_dataset))
+    test_size = len(full_dataset) - train_size
+    train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
 
     print("Creating data loaders...")
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
@@ -100,7 +100,6 @@ def main(args):
         accuracy = evaluate(model, test_loader, device)
         print(f"Accuracy: {accuracy:.2f}%")
 
-        # 가중치 저장
         if accuracy > best_accuracy:
             best_accuracy = accuracy
             torch.save(model.state_dict(), "best_model.pth")
