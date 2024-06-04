@@ -6,7 +6,7 @@ from torchvision import models
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        self.efficientnet = models.efficientnet_b0(weights=None)
+        self.efficientnet = models.efficientnet_b0(pretrained=True)
         self.efficientnet.classifier = nn.Identity()  # 마지막 분류기 레이어 제거
         self.lstm = nn.LSTM(1280, 512, batch_first=True)
         self.fc = nn.Linear(512, num_classes)
