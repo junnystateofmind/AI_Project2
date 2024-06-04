@@ -2,12 +2,18 @@ import torch
 import torch.nn as nn
 from torchvision import models
 
-
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
+        # EfficientNet-b0 모델 불러오기
         self.efficientnet = models.efficientnet_b0(pretrained=True)
         self.efficientnet.classifier = nn.Identity()  # 마지막 분류기 레이어 제거
+
+        # EfficientNet 레이어를 동결
+        for param in self.efficientnet.parameters():
+            param.requires_grad = False
+
+        # LSTM 및 Fully Connected 레이어 정의
         self.lstm = nn.LSTM(1280, 512, batch_first=True)
         self.fc = nn.Linear(512, num_classes)
 
