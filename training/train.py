@@ -85,7 +85,7 @@ def main(args):
 
     print("Loading datasets...")
     full_dataset = UCF101(root='./data/UCF-101', annotation_path='./data/annotations/ucfTrainTestlist',
-                          frames_per_clip=4, step_between_clips=1, fold=1, train=True, transform=transform)
+                          frames_per_clip=16, step_between_clips=1, fold=1, train=True, transform=transform)
     train_size = int(0.8 * len(full_dataset))
     test_size = len(full_dataset) - train_size
     train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])

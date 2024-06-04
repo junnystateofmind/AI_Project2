@@ -15,8 +15,8 @@ class MyModel(nn.Module):
             param.requires_grad = False
 
         # LSTM 및 Fully Connected 레이어 정의
-        self.lstm = nn.LSTM(1280, 512, batch_first=True)
-        self.fc = nn.Linear(512, num_classes)
+        self.lstm = nn.LSTM(1280, 128, batch_first=True)
+        self.fc = nn.Linear(128, num_classes)
 
     def forward(self, x):
         batch_size, num_frames, channels, height, width = x.size()
@@ -31,10 +31,10 @@ class MyModel(nn.Module):
         cnn_features = cnn_features.view(batch_size, num_frames, -1)
 
         # LSTM 통과
-        lstm_output, _ = self.lstm(cnn_features)  # (batch_size, num_frames, 512)
+        lstm_output, _ = self.lstm(cnn_features)  # (batch_size, num_frames, 128)
 
-        # LSTM 출력에 대해 Global Average Pooling 적용
-        lstm_output = lstm_output.mean(dim=1)  # (batch_size, 512)
+        # Global Average Pooling 적용
+        lstm_output = lstm_output.mean(dim=1)  # (batch_size, 128)
 
         # Fully Connected Layer 통과
         output = self.fc(lstm_output)  # (batch_size, num_classes)
