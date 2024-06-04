@@ -11,6 +11,7 @@ from torchvision.transforms import Compose, Resize, Normalize
 from models.my_model import MyModel
 from tqdm import tqdm
 from torchinfo import summary
+from torch.cuda.amp import autocast, GradScaler
 
 class FrameNormalize:
     def __init__(self, mean, std):
@@ -36,21 +37,28 @@ def combine_optical_flow_channels(video):
     video = video.view(B, T, 80, 3, H, W).mean(dim=2)
     return video
 
-def train_one_epoch(model, criterion, optimizer, data_loader, device):
+
+def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
     model.train()
     running_loss = 0.0
     for inputs, labels in tqdm(data_loader, desc="Training"):
         inputs, labels = inputs.to(device), labels.to(device)
         inputs = combine_optical_flow_channels(inputs)
         optimizer.zero_grad()
-        outputs = model(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
+
+        with autocast():
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+
         running_loss += loss.item()
     return running_loss / len(data_loader)
 
-def evaluate(model, data_loader, device):
+
+def evaluate(model, data_loader, device, scaler):
     model.eval()
     correct = 0
     total = 0
@@ -58,8 +66,11 @@ def evaluate(model, data_loader, device):
         for inputs, labels in tqdm(data_loader, desc="Evaluating"):
             inputs, labels = inputs.to(device), labels.to(device)
             inputs = combine_optical_flow_channels(inputs)
-            outputs = model(inputs)
-            _, predicted = torch.max(outputs.data, 1)
+
+            with autocast():
+                outputs = model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     return 100 * correct / total
@@ -89,14 +100,15 @@ def main(args):
     model = MyModel(num_classes=101).to(device)
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    scaler = GradScaler()
 
     best_accuracy = 0.0
     for epoch in range(args.epochs):
         print(f"Epoch {epoch + 1} starting...")
-        train_loss = train_one_epoch(model, criterion, optimizer, train_loader, device)
+        train_loss = train_one_epoch(model, criterion, optimizer, train_loader, device, scaler)
         print(f"Epoch {epoch + 1}, Loss: {train_loss:.4f}")
 
-        accuracy = evaluate(model, test_loader, device)
+        accuracy = evaluate(model, test_loader, device, scaler)
         print(f"Accuracy: {accuracy:.2f}%")
 
         if accuracy > best_accuracy:
@@ -108,7 +120,7 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--batch_size', type=int, default=2)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--num_workers', type=int, default=1)
