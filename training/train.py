@@ -6,7 +6,6 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import UCF101
-from argparse import ArgumentParser
 from torchvision.transforms import Compose, Resize, Normalize
 from models.my_model import MyModel
 from tqdm import tqdm
@@ -32,11 +31,17 @@ def custom_collate_fn(batch):
     labels = torch.tensor(labels)
     return videos, labels
 
+def combine_optical_flow_channels(video):
+    B, T, C, H, W = video.size()
+    video = video.view(B, T, 80, 3, H, W).mean(dim=2)
+    return video
+
 def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
     model.train()
     running_loss = 0.0
     for inputs, labels in tqdm(data_loader, desc="Training"):
         inputs, labels = inputs.to(device), labels.to(device)
+        inputs = combine_optical_flow_channels(inputs)
         optimizer.zero_grad()
 
         with autocast():
@@ -50,7 +55,6 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
         running_loss += loss.item()
     return running_loss / len(data_loader)
 
-
 def evaluate(model, data_loader, device, scaler):
     model.eval()
     correct = 0
@@ -58,6 +62,7 @@ def evaluate(model, data_loader, device, scaler):
     with torch.no_grad():
         for inputs, labels in tqdm(data_loader, desc="Evaluating"):
             inputs, labels = inputs.to(device), labels.to(device)
+            inputs = combine_optical_flow_channels(inputs)
 
             with autocast():
                 outputs = model(inputs)
@@ -71,7 +76,7 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transform = Compose([
-        Resize((224, 224)),
+        Resize((112, 112)),  # 이미지 크기를 112x112로 조정
         FrameNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
@@ -90,7 +95,6 @@ def main(args):
 
     print("Initializing model...")
     model = MyModel(num_classes=101).to(device)
-    summary(model, input_size=(args.batch_size, 16, 240, 224, 224), device=device.type)
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     scaler = GradScaler()

@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
+from torchvision import models
 import timm
-from torchinfo import summary
+
 
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
@@ -16,7 +17,7 @@ class MyModel(nn.Module):
             param.requires_grad = False
 
         # LSTM 및 Fully Connected 레이어 정의
-        self.lstm = nn.LSTM(1280, 128, batch_first=True)
+        self.lstm = nn.LSTM(640, 128, batch_first=True)  # 최종 컨볼루션 출력 크기 감소
         self.fc = nn.Linear(128, num_classes)
 
     def forward(self, x):
@@ -26,9 +27,9 @@ class MyModel(nn.Module):
         x = x.view(-1, channels, height, width)
 
         # CNN 통과
-        cnn_features = self.efficientnet(x)  # (batch_size * num_frames, 1280)
+        cnn_features = self.efficientnet(x)  # (batch_size * num_frames, 640)
 
-        # (batch_size, num_frames, 1280)로 변환
+        # (batch_size, num_frames, 640)로 변환
         cnn_features = cnn_features.view(batch_size, num_frames, -1)
 
         # LSTM 통과
@@ -42,6 +43,7 @@ class MyModel(nn.Module):
 
         return output
 
+
 # 모델 인스턴스 생성
 model = MyModel(num_classes=101)
 
@@ -50,4 +52,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 # 모델 요약 정보 출력
-summary(model, input_size=(8, 16, 240, 224, 224), device=device.type)  # (batch_size, num_frames, channels, height, width)
+from torchinfo import summary
+
+summary(model, input_size=(8, 16, 240, 112, 112),
+        device=device.type)  # (batch_size, num_frames, channels, height, width)
