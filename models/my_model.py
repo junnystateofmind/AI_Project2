@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
-import timm
+from torchvision import models
 
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        # EfficientNet-Lite0 모델 불러오기
-        self.efficientnet = timm.create_model('efficientnet_lite0', pretrained=True)
-        self.efficientnet.classifier = nn.Identity()  # 마지막 분류기 레이어 제거
+        # EfficientNet-b0 모델 불러오기
+        self.efficientnet = models.efficientnet_b0(pretrained=True)
+        self.efficientnet.features[0][0] = nn.Conv2d(240, 32, kernel_size=3, stride=2, padding=1, bias=False)
 
         # EfficientNet 레이어를 동결
         for param in self.efficientnet.parameters():
@@ -40,8 +40,6 @@ class MyModel(nn.Module):
 
         return output
 
-from torchinfo import summary
-
 # 모델 인스턴스 생성
 model = MyModel(num_classes=101)
 
@@ -50,4 +48,4 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)
 
 # 모델 요약 정보 출력
-summary(model, input_size=(8, 16, 3, 224, 224), device=device.type)  # (batch_size, num_frames, channels, height, width)
+summary(model, input_size=(8, 16, 240, 224, 224), device=device.type)  # (batch_size, num_frames, channels, height, width)
