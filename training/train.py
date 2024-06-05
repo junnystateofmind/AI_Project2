@@ -11,6 +11,7 @@ from models.my_model import MyModel
 from tqdm import tqdm
 from torchinfo import summary
 from torch.cuda.amp import autocast, GradScaler
+from argparse import ArgumentParser
 
 class FrameNormalize:
     def __init__(self, mean, std):
