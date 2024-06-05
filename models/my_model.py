@@ -1,13 +1,15 @@
 import torch
 import torch.nn as nn
-from torchvision import models
+import timm
+from torchinfo import summary
 
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        # EfficientNet-b0 모델 불러오기
-        self.efficientnet = models.efficientnet_b0(pretrained=True)
-        self.efficientnet.features[0][0] = nn.Conv2d(240, 32, kernel_size=3, stride=2, padding=1, bias=False)
+        # EfficientNet-Lite0 모델 불러오기
+        self.efficientnet = timm.create_model('efficientnet_lite0', pretrained=True)
+        self.efficientnet.conv_stem = nn.Conv2d(240, 32, kernel_size=3, stride=2, padding=1, bias=False)  # Input 채널 변경
+        self.efficientnet.classifier = nn.Identity()  # 마지막 Fully Connected Layer 제거
 
         # EfficientNet 레이어를 동결
         for param in self.efficientnet.parameters():
