@@ -5,16 +5,16 @@ from torchvision import models
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        # squeeznet 사용
-        self.squeezenet = models.squeezenet1_1(pretrained=True)
-        self.squeezenet.classifier = nn.Identity()  # 마지막 분류기 레이어 제거
+        # MobileNetV2 모델 불러오기
+        self.mobilenet = models.mobilenet_v2(pretrained=True)
+        self.mobilenet.classifier = nn.Identity()  # 마지막 분류기 레이어 제거
 
-        # squeeznet의 첫 번째 레이어를 수정하여 240 채널을 처리하도록 변경
-        self.squeezenet.features[0][0] = nn.Conv2d(240, 32, kernel_size=3, stride=2, padding=1, bias=False)
+        # MobileNetV2의 첫 번째 레이어를 수정하여 240 채널을 처리하도록 변경
+        self.mobilenet.features[0][0] = nn.Conv2d(240, 32, kernel_size=3, stride=2, padding=1, bias=False)
 
-        # 동결 (학습되지 않도록) 설정
-        # for param in self.squeezenet.parameters():
-        #     param.requires_grad = False
+        # MobileNetV2 레이어를 동결
+        for param in self.mobilenet.parameters():
+            param.requires_grad = False
 
         # LSTM 및 Fully Connected 레이어 정의
         self.lstm = nn.LSTM(1280, 128, batch_first=True)
@@ -27,7 +27,7 @@ class MyModel(nn.Module):
         x = x.view(-1, channels, height, width)
 
         # CNN 통과
-        cnn_features = self.efficientnet(x)  # (batch_size * num_frames, 1280)
+        cnn_features = self.mobilenet(x)  # (batch_size * num_frames, 1280)
 
         # (batch_size, num_frames, 1280)로 변환
         cnn_features = cnn_features.view(batch_size, num_frames, -1)
