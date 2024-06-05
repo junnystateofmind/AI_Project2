@@ -5,16 +5,16 @@ from torchvision import models
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        # EfficientNet-b0 모델 불러오기
-        self.efficientnet = models.efficientnet_b0(pretrained=True)
-        self.efficientnet.classifier = nn.Identity()  # 마지막 분류기 레이어 제거
+        # squeeznet 사용
+        self.squeezenet = models.squeezenet1_1(pretrained=True)
+        self.squeezenet.classifier = nn.Identity()  # 마지막 분류기 레이어 제거
 
-        # EfficientNet의 첫 번째 레이어를 수정하여 240 채널을 처리하도록 변경
-        self.efficientnet.features[0][0] = nn.Conv2d(240, 32, kernel_size=3, stride=2, padding=1, bias=False)
+        # squeeznet의 첫 번째 레이어를 수정하여 240 채널을 처리하도록 변경
+        self.squeezenet.features[0][0] = nn.Conv2d(240, 32, kernel_size=3, stride=2, padding=1, bias=False)
 
-        # EfficientNet 레이어를 동결
-        for param in self.efficientnet.parameters():
-            param.requires_grad = False
+        # 동결 (학습되지 않도록) 설정
+        # for param in self.squeezenet.parameters():
+        #     param.requires_grad = False
 
         # LSTM 및 Fully Connected 레이어 정의
         self.lstm = nn.LSTM(1280, 128, batch_first=True)
