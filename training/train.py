@@ -37,13 +37,13 @@ def combine_optical_flow_channels(video):
     video = video.view(B, T, 80, 3, H, W).mean(dim=2)
     return video
 
-
 def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
     model.train()
     running_loss = 0.0
     for inputs, labels in tqdm(data_loader, desc="Training"):
         inputs, labels = inputs.to(device), labels.to(device)
         inputs = combine_optical_flow_channels(inputs)
+        print(f"Input shape after combine_optical_flow_channels: {inputs.shape}")
         optimizer.zero_grad()
 
         with autocast():
@@ -57,7 +57,6 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
         running_loss += loss.item()
     return running_loss / len(data_loader)
 
-
 def evaluate(model, data_loader, device, scaler):
     model.eval()
     correct = 0
@@ -66,6 +65,7 @@ def evaluate(model, data_loader, device, scaler):
         for inputs, labels in tqdm(data_loader, desc="Evaluating"):
             inputs, labels = inputs.to(device), labels.to(device)
             inputs = combine_optical_flow_channels(inputs)
+            print(f"Input shape after combine_optical_flow_channels: {inputs.shape}")
 
             with autocast():
                 outputs = model(inputs)
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=2)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--num_workers', type=int, default=1)
+    parser.add_argument('--num_workers', type=int, default(1)
     parser.add_argument('--pin_memory', type=bool, default=False)
     args = parser.parse_args()
 
