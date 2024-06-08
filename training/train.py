@@ -34,8 +34,7 @@ def custom_collate_fn(batch):
 
 def combine_optical_flow_channels(video):
     B, T, C, H, W = video.size()
-    video = video.view(B, T, 80, 3, H, W).mean(dim=2)
-    return video
+    return video.view(B, T, C * 80, H, W)  # 80개의 optical flow 프레임을 합칩니다.
 
 def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
     model.train()
