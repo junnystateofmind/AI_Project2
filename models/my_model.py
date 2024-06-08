@@ -3,7 +3,6 @@ import torch.nn as nn
 from torchvision import models
 import timm
 
-
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
