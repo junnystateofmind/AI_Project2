@@ -32,6 +32,10 @@ class MyModel(nn.Module):
         # CNN 통과
         cnn_features = self.efficientnet(x)  # (batch_size * num_frames, 1280, 7, 7)
 
+        # cnn_features가 4차원인지 확인하고 변환
+        if cnn_features.dim() == 2:
+            cnn_features = cnn_features.unsqueeze(-1).unsqueeze(-1)
+
         # Global Average Pooling 적용
         cnn_features = self.gap(cnn_features)  # (batch_size * num_frames, 1280, 1, 1)
         cnn_features = cnn_features.view(cnn_features.size(0), -1)  # (batch_size * num_frames, 1280)
@@ -52,3 +56,14 @@ class MyModel(nn.Module):
         output = self.fc2(lstm_output)  # (batch_size, num_classes)
 
         return output
+
+# 모델 인스턴스 생성
+model = MyModel(num_classes=101)
+
+# 모델을 GPU로 이동
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
+# 모델 요약 정보 출력
+from torchinfo import summary
+summary(model, input_size=(8, 16, 240, 112, 112), device=device.type)  # (batch_size, num_frames, channels, height, width)
