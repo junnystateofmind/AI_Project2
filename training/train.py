@@ -1,5 +1,6 @@
 import os
 import sys
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import torch
@@ -13,6 +14,7 @@ from tqdm import tqdm
 from torchinfo import summary
 from torch.cuda.amp import autocast, GradScaler
 
+
 class FrameNormalize:
     def __init__(self, mean, std):
         self.mean = mean
@@ -25,6 +27,7 @@ class FrameNormalize:
                 t[c, :, :].sub_(mean).div_(std)
         return video
 
+
 def custom_collate_fn(batch):
     videos = [item[0] for item in batch]
     labels = [item[2] for item in batch]
@@ -32,11 +35,13 @@ def custom_collate_fn(batch):
     labels = torch.tensor(labels)
     return videos, labels
 
+
 def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
     model.train()
     running_loss = 0.0
     for inputs, labels in tqdm(data_loader, desc="Training"):
         inputs, labels = inputs.to(device), labels.to(device)
+        print(f"Training inputs shape: {inputs.shape}")  # 데이터 차원 출력
         optimizer.zero_grad()
 
         with autocast():
@@ -50,6 +55,7 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
         running_loss += loss.item()
     return running_loss / len(data_loader)
 
+
 def evaluate(model, data_loader, device, scaler):
     model.eval()
     correct = 0
@@ -57,6 +63,7 @@ def evaluate(model, data_loader, device, scaler):
     with torch.no_grad():
         for inputs, labels in tqdm(data_loader, desc="Evaluating"):
             inputs, labels = inputs.to(device), labels.to(device)
+            print(f"Evaluating inputs shape: {inputs.shape}")  # 데이터 차원 출력
 
             with autocast():
                 outputs = model(inputs)
@@ -65,6 +72,7 @@ def evaluate(model, data_loader, device, scaler):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     return 100 * correct / total
+
 
 def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -108,6 +116,7 @@ def main(args):
             print("Best model saved with accuracy: {:.2f}%".format(best_accuracy))
 
     print("Training complete. Best accuracy: {:.2f}%".format(best_accuracy))
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()
