@@ -6,12 +6,12 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import UCF101
+from argparse import ArgumentParser
 from torchvision.transforms import Compose, Resize, Normalize
 from models.my_model import MyModel
 from tqdm import tqdm
 from torchinfo import summary
 from torch.cuda.amp import autocast, GradScaler
-from argparse import ArgumentParser
 
 class FrameNormalize:
     def __init__(self, mean, std):
@@ -32,16 +32,11 @@ def custom_collate_fn(batch):
     labels = torch.tensor(labels)
     return videos, labels
 
-def combine_optical_flow_channels(video):
-    B, T, C, H, W = video.size()
-    return video.view(B, T, C * 80, H, W)  # 80개의 optical flow 프레임을 합칩니다.
-
 def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
     model.train()
     running_loss = 0.0
     for inputs, labels in tqdm(data_loader, desc="Training"):
         inputs, labels = inputs.to(device), labels.to(device)
-        inputs = combine_optical_flow_channels(inputs)
         optimizer.zero_grad()
 
         with autocast():
@@ -62,7 +57,6 @@ def evaluate(model, data_loader, device, scaler):
     with torch.no_grad():
         for inputs, labels in tqdm(data_loader, desc="Evaluating"):
             inputs, labels = inputs.to(device), labels.to(device)
-            inputs = combine_optical_flow_channels(inputs)
 
             with autocast():
                 outputs = model(inputs)
@@ -76,7 +70,7 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transform = Compose([
-        Resize((112, 112)),  # 이미지 크기를 112x112로 조정
+        Resize((112, 112)),
         FrameNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
