@@ -8,13 +8,12 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, random_split, Dataset
 from argparse import ArgumentParser
 from torchvision.transforms import Compose, Resize, Normalize, ToPILImage
-from models.my_model import MyModel
+import pandas as pd
+import random
 from tqdm import tqdm
 from torchinfo import summary
 from torch.cuda.amp import autocast, GradScaler
-import random
-import pandas as pd
-import numpy as np
+from PIL import Image
 import skvideo.io
 
 
@@ -174,7 +173,7 @@ def main(args):
     ])
 
     print("Loading datasets...")
-    full_dataset = UCF101Dataset(root='./data/UCF-101', clip_len=16, split='1', train=True, transforms_=transform)
+    full_dataset = UCF101Dataset(root_dir='./data/UCF-101', clip_len=16, split='1', train=True, transforms_=transform)
     train_size = int(0.8 * len(full_dataset))
     test_size = len(full_dataset) - train_size
     train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
