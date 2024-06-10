@@ -53,7 +53,8 @@ class MyModel(nn.Module):
         cnn_features = self.image_model(selected_frames)  # (batch_size * top_k, 1280, 7, 7)
 
         # Global Average Pooling 적용
-        cnn_features = self.gap(cnn_features)  # (batch_size * top_k, 1280, 1, 1)
+        if cnn_features.dim() == 4:
+            cnn_features = self.gap(cnn_features)  # (batch_size * top_k, 1280, 1, 1)
         cnn_features = cnn_features.view(cnn_features.size(0), -1)  # (batch_size * top_k, 1280)
 
         # Fully Connected Layer 통과
