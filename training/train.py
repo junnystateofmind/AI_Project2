@@ -33,6 +33,8 @@ def custom_collate_fn(batch):
     labels = [item[1] for item in batch]
 
     # Ensure all labels are tensors of the same size
+    # TypeError: only integer tensors of a single element can be converted to an index 발생, 확인하기 위해서 타입 출력
+    print(f"labels type: {type(labels)}")
     labels = torch.tensor(labels, dtype=torch.int64)
 
     videos = torch.stack(videos)
