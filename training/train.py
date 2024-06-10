@@ -12,6 +12,8 @@ from torchinfo import summary
 from torch.cuda.amp import autocast, GradScaler
 from PIL import Image
 import skvideo.io
+from models.my_model import MyModel
+import numpy as np
 
 
 class UCF101Dataset(Dataset):
