@@ -1,8 +1,5 @@
 import os
 import sys
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, random_split, Dataset
@@ -26,15 +23,16 @@ class UCF101Dataset(Dataset):
         self.transforms_ = transforms_
         self.test_sample_num = test_sample_num
         self.toPIL = ToPILImage()
-        class_idx_path = os.path.join(root_dir, 'split', 'classInd.txt')
+        class_idx_path = os.path.join(root_dir, 'annotations/ucfTrainTestlist', 'classInd.txt')
         self.class_idx2label = pd.read_csv(class_idx_path, header=None, sep=' ').set_index(0)[1]
         self.class_label2idx = pd.read_csv(class_idx_path, header=None, sep=' ').set_index(1)[0]
 
         if self.train:
-            train_split_path = os.path.join(root_dir, 'split', 'trainlist0' + self.split + '.txt')
+            train_split_path = os.path.join(root_dir, 'annotations/ucfTrainTestlist',
+                                            'trainlist0' + self.split + '.txt')
             self.train_split = pd.read_csv(train_split_path, header=None, sep=' ')[0]
         else:
-            test_split_path = os.path.join(root_dir, 'split', 'testlist0' + self.split + '.txt')
+            test_split_path = os.path.join(root_dir, 'annotations/ucfTrainTestlist', 'testlist0' + self.split + '.txt')
             self.test_split = pd.read_csv(test_split_path, header=None)[0]
         print('Use split' + self.split)
 
@@ -50,7 +48,7 @@ class UCF101Dataset(Dataset):
         else:
             videoname = self.test_split[idx]
         class_idx = self.class_label2idx[videoname[:videoname.find('/')]]
-        filename = os.path.join(self.root_dir, 'video', videoname)
+        filename = os.path.join(self.root_dir, 'UCF101', videoname)
         videodata = skvideo.io.vread(filename)
         length, height, width, channel = videodata.shape
 
@@ -111,7 +109,6 @@ def custom_collate_fn(batch):
     videos = [item[0] for item in batch]
     labels = [item[1] for item in batch]
 
-    # Debugging: Print the types and lengths of labels
     print(f"Labels: {labels}")
     print(f"Labels type: {[type(label) for label in labels]}")
     print(f"Labels length: {len(labels)}")
@@ -173,7 +170,7 @@ def main(args):
     ])
 
     print("Loading datasets...")
-    full_dataset = UCF101Dataset(root_dir='./data/UCF-101', clip_len=16, split='1', train=True, transforms_=transform)
+    full_dataset = UCF101Dataset(root_dir='./data', clip_len=16, split='1', train=True, transforms_=transform)
     train_size = int(0.8 * len(full_dataset))
     test_size = len(full_dataset) - train_size
     train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
