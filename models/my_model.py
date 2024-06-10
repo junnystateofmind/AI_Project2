@@ -6,21 +6,23 @@ import timm
 class MyModel(nn.Module):
     def __init__(self, num_classes=101):
         super(MyModel, self).__init__()
-        # EfficientNet-Lite0 모델 불러오기
-        self.efficientnet = timm.create_model('efficientnet_lite0', pretrained=True)
-        self.efficientnet.conv_stem = nn.Conv2d(240, 32, kernel_size=3, stride=2, padding=1, bias=False)  # Input 채널 변경
-        self.efficientnet.classifier = nn.Identity()  # 마지막 Fully Connected Layer 제거
+        # # EfficientNet-Lite0 모델 불러오기
+        # self.image_model = timm.create_model('efficientnet_lite0', pretrained=False)
+        # self.image_model.conv_stem = nn.Conv2d(240, 32, kernel_size=3, stride=2, padding=1, bias=False)  # Input 채널 변경
+        # self.image_model.classifier = nn.Identity()  # 마지막 Fully Connected Layer 제거
 
-        # EfficientNet 레이어를 동결
-        for param in self.efficientnet.parameters():
-            param.requires_grad = False
+        # GhostNet 모델 불러오기
+        self.image_model = timm.create_model('ghostnet_100', pretrained=False)
+        self.image_model.conv_stem = nn.Conv2d(240, 16, kernel_size=3, stride=2, padding=1, bias=False)
+        self.image_model.classifier = nn.Identity()
+
 
         # Global Average Pooling 및 Fully Connected 레이어 정의
         self.gap = nn.AdaptiveAvgPool2d((1, 1))
-        self.fc1 = nn.Linear(1280, 101)
+        self.fc1 = nn.Linear(1280, num_classes)
 
         # LSTM 및 최종 Fully Connected 레이어 정의
-        self.lstm = nn.LSTM(101, 128, batch_first=True)
+        self.lstm = nn.LSTM(num_classes, 128, batch_first=True)
         self.fc2 = nn.Linear(128, num_classes)
 
     def forward(self, x):
@@ -30,7 +32,7 @@ class MyModel(nn.Module):
         x = x.view(-1, channels, height, width)
 
         # CNN 통과
-        cnn_features = self.efficientnet(x)  # (batch_size * num_frames, 1280, 7, 7)
+        cnn_features = self.image_model(x)  # (batch_size * num_frames, 1280, 7, 7)
 
         # cnn_features가 4차원인지 확인하고 변환
         if cnn_features.dim() == 2:
