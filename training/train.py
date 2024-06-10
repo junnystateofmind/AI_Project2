@@ -30,7 +30,7 @@ class FrameNormalize:
 
 def custom_collate_fn(batch):
     videos = [item[0] for item in batch]
-    labels = [item[2] for item in batch]
+    labels = [item[1] for item in batch]
     videos = torch.stack(videos)
     labels = torch.tensor(labels)
     return videos, labels
@@ -100,6 +100,9 @@ def main(args):
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     scaler = GradScaler()
+
+    print("Model Summary:")
+    summary(model, input_size=(args.batch_size, 16, 3, 112, 112), device=device.type)
 
     best_accuracy = 0.0
     for epoch in range(args.epochs):
