@@ -2,15 +2,18 @@ import os
 import random
 import pandas as pd
 import torch
-from torch.utils.data import Dataset, DataLoader, random_split
-from torchvision.transforms import Compose, Resize, Normalize, ToPILImage
+from torch.utils.data import Dataset
+from torchvision.transforms import Compose, Resize, Normalize, ToPILImage, ToTensor
+from PIL import Image
+import numpy as np
+import cv2
+from torch.utils.data import DataLoader, random_split
 from torch import optim
 from torch.cuda.amp import GradScaler, autocast
 from tqdm import tqdm
 from argparse import ArgumentParser
 from models.my_model import MyModel
-import numpy as np
-import cv2
+
 
 class UCF101Dataset(Dataset):
     def __init__(self, root_dir, clip_len, split='1', train=True, transforms_=None, test_sample_num=10):
@@ -46,7 +49,7 @@ class UCF101Dataset(Dataset):
         else:
             videoname = self.test_split[idx]
         class_idx = self.class_label2idx[videoname[:videoname.find('/')]]
-        filename = os.path.join(self.root_dir, 'UCF-101', videoname)
+        filename = os.path.join(self.root_dir, 'UCF101', videoname)
 
         # Use OpenCV to read the video
         cap = cv2.VideoCapture(filename)
@@ -59,8 +62,7 @@ class UCF101Dataset(Dataset):
             frames.append(frame)
         cap.release()
 
-        # Check if video is loaded successfully
-        if len(frames) == 0:
+        if not frames:
             raise ValueError(f"Failed to load video: {filename}")
 
         videodata = np.array(frames)
@@ -112,6 +114,8 @@ class FrameNormalize:
         self.std = std
 
     def __call__(self, video):
+        # Convert PIL Image to Tensor
+        video = ToTensor()(video)
         video = video.float()
         for t in video:
             for c, (mean, std) in enumerate(zip(self.mean, self.std)):
@@ -220,11 +224,11 @@ def main(args):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=4)  # 배치 크기 줄임
+    parser.add_argument('--batch_size', type=int, default=4)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--num_workers', type=int, default=1)  # num_workers 줄임
-    parser.add_argument('--pin_memory', type=bool, default=False)  # pin_memory 비활성화
+    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--pin_memory', action='store_true')
     args = parser.parse_args()
 
     main(args)
