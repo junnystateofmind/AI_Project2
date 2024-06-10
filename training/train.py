@@ -1,20 +1,16 @@
 import os
-import sys
-import torch
-import torch.optim as optim
-from torch.utils.data import DataLoader, random_split, Dataset
-from argparse import ArgumentParser
-from torchvision.transforms import Compose, Resize, Normalize, ToPILImage
-import pandas as pd
 import random
+import pandas as pd
+import torch
+from torch.utils.data import Dataset, DataLoader, random_split
+from torchvision.transforms import Compose, Resize, Normalize, ToPILImage
+from torch import optim
+from torch.cuda.amp import GradScaler, autocast
 from tqdm import tqdm
-from torchinfo import summary
-from torch.cuda.amp import autocast, GradScaler
-from PIL import Image
-import skvideo.io
+from argparse import ArgumentParser
 from models.my_model import MyModel
 import numpy as np
-
+import cv2
 
 class UCF101Dataset(Dataset):
     def __init__(self, root_dir, clip_len, split='1', train=True, transforms_=None, test_sample_num=10):
@@ -51,7 +47,23 @@ class UCF101Dataset(Dataset):
             videoname = self.test_split[idx]
         class_idx = self.class_label2idx[videoname[:videoname.find('/')]]
         filename = os.path.join(self.root_dir, 'UCF101', videoname)
-        videodata = skvideo.io.vread(filename)
+
+        # Use OpenCV to read the video
+        cap = cv2.VideoCapture(filename)
+        frames = []
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frames.append(frame)
+        cap.release()
+
+        # Check if video is loaded successfully
+        if len(frames) == 0:
+            raise ValueError(f"Failed to load video: {filename}")
+
+        videodata = np.array(frames)
         length, height, width, channel = videodata.shape
 
         if self.train:
