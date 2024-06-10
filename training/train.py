@@ -14,6 +14,7 @@ from tqdm import tqdm
 from torchinfo import summary
 from torch.cuda.amp import autocast, GradScaler
 
+
 class FrameNormalize:
     def __init__(self, mean, std):
         self.mean = mean
@@ -26,12 +27,17 @@ class FrameNormalize:
                 t[c, :, :].sub_(mean).div_(std)
         return video
 
+
 def custom_collate_fn(batch):
     videos = [item[0] for item in batch]
-    labels = [item[1] for item in batch]  # item[2]에서 item[1]로 수정합니다.
+    labels = [item[1] for item in batch]
+
+    # Ensure all labels are of the same size
+    labels = torch.tensor(labels, dtype=torch.int64)
+
     videos = torch.stack(videos)
-    labels = torch.stack(labels)  # 리스트를 텐서로 변환합니다.
     return videos, labels
+
 
 def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
     model.train()
@@ -52,6 +58,7 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
         running_loss += loss.item()
     return running_loss / len(data_loader)
 
+
 def evaluate(model, data_loader, device, scaler):
     model.eval()
     correct = 0
@@ -68,6 +75,7 @@ def evaluate(model, data_loader, device, scaler):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
     return 100 * correct / total
+
 
 def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -86,9 +94,9 @@ def main(args):
 
     print("Creating data loaders...")
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
-                              collate_fn=custom_collate_fn, pin_memory=args.pin_memory)
+                              collate_fn=custom_collate_fn, pin_memory=args.pin_memory, persistent_workers=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
-                             collate_fn=custom_collate_fn, pin_memory=args.pin_memory)
+                             collate_fn=custom_collate_fn, pin_memory=args.pin_memory, persistent_workers=True)
 
     print("Initializing model...")
     model = MyModel(num_classes=101).to(device)
@@ -112,13 +120,14 @@ def main(args):
 
     print("Training complete. Best accuracy: {:.2f}%".format(best_accuracy))
 
+
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--batch_size', type=int, default=4)  # 배치 크기 줄임
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--num_workers', type=int, default = 4)
-    parser.add_argument('--pin_memory', type=bool, default=False)
+    parser.add_argument('--num_workers', type=int, default=1)  # num_workers 줄임
+    parser.add_argument('--pin_memory', type=bool, default=False)  # pin_memory 비활성화
     args = parser.parse_args()
 
     main(args)
