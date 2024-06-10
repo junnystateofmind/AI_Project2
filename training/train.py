@@ -32,7 +32,7 @@ def custom_collate_fn(batch):
     videos = [item[0] for item in batch]
     labels = [item[1] for item in batch]
 
-    # Ensure all labels are of the same size
+    # Ensure all labels are tensors of the same size
     labels = torch.tensor(labels, dtype=torch.int64)
 
     videos = torch.stack(videos)
