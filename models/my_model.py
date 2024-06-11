@@ -25,7 +25,7 @@ class MyModel(nn.Module):
 
         # MLP for frame selection
         self.mlp = nn.Sequential(
-            nn.Linear(3 * 112 * 112, 512),
+            nn.Linear(240 * 320 * 3, 512),
             nn.ReLU(),
             nn.Linear(512, 1)
         )
