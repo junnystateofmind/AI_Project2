@@ -7,6 +7,15 @@ from torchvision.transforms import Compose, Resize, Normalize, ToPILImage
 from PIL import Image
 import numpy as np
 import cv2
+import torch.nn as nn
+from torch.utils.data import DataLoader, random_split
+from torchvision.transforms import Compose, Resize, Normalize
+from argparse import ArgumentParser
+from tqdm import tqdm
+from torch.cuda.amp import autocast, GradScaler
+from torch import optim
+from models.my_model import MyModel
+
 
 class UCF101Dataset(Dataset):
     def __init__(self, root_dir, clip_len, split='1', train=True, transforms_=None, test_sample_num=10):
@@ -56,6 +65,9 @@ class UCF101Dataset(Dataset):
         cap.release()
 
         videodata = np.array(frames)
+        if len(videodata.shape) != 4:  # Ensure the video data has four dimensions
+            raise ValueError(f"Failed to load video: {filename}")
+
         length, height, width, channel = videodata.shape
 
         if self.train:
@@ -104,7 +116,11 @@ class FrameNormalize:
         self.std = std
 
     def __call__(self, video):
-        video = video.float()
+        if isinstance(video, torch.Tensor):
+            video = video.float()
+        else:
+            video = torch.tensor(video, dtype=torch.float32)
+
         for t in video:
             for c, (mean, std) in enumerate(zip(self.mean, self.std)):
                 t[c, :, :].sub_(mean).div_(std)
@@ -127,3 +143,94 @@ def custom_collate_fn(batch):
 
     videos = torch.stack(videos)
     return videos, labels
+
+
+# 학습 함수
+def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
+    model.train()
+    running_loss = 0.0
+    for inputs, labels in tqdm(data_loader, desc="Training"):
+        inputs, labels = inputs.to(device), labels.to(device)
+        optimizer.zero_grad()
+
+        with autocast():
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+
+        running_loss += loss.item()
+    return running_loss / len(data_loader)
+
+
+# 평가 함수
+def evaluate(model, data_loader, device, scaler):
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for inputs, labels in tqdm(data_loader, desc="Evaluating"):
+            inputs, labels = inputs.to(device), labels.to(device)
+            with autocast():
+                outputs = model(inputs)
+                _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+    return 100 * correct / total
+
+
+# 메인 함수
+def main(args):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    transform = Compose([
+        Resize((112, 112)),
+        FrameNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+    print("Loading datasets...")
+    full_dataset = UCF101Dataset(root_dir='./data', clip_len=16, split='1', train=True, transforms_=transform)
+    train_size = int(0.8 * len(full_dataset))
+    test_size = len(full_dataset) - train_size
+    train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
+
+    print("Creating data loaders...")
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
+                              collate_fn=custom_collate_fn, pin_memory=args.pin_memory, persistent_workers=True)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
+                             collate_fn=custom_collate_fn, pin_memory=args.pin_memory, persistent_workers=True)
+
+    print("Initializing model...")
+    model = MyModel(num_classes=101, top_k=5).to(device)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+    scaler = GradScaler()
+
+    best_accuracy = 0.0
+    for epoch in range(args.epochs):
+        print(f"Epoch {epoch + 1} starting...")
+        train_loss = train_one_epoch(model, criterion, optimizer, train_loader, device, scaler)
+        print(f"Epoch {epoch + 1}, Loss: {train_loss:.4f}")
+
+        accuracy = evaluate(model, test_loader, device, scaler)
+        print(f"Accuracy: {accuracy:.2f}%")
+
+        if accuracy > best_accuracy:
+            best_accuracy = accuracy
+            torch.save(model.state_dict(), "best_model.pth")
+            print("Best model saved with accuracy: {:.2f}%".format(best_accuracy))
+
+    print("Training complete. Best accuracy: {:.2f}%".format(best_accuracy))
+
+
+if __name__ == "__main__":
+    parser = ArgumentParser()
+    parser.add_argument('--batch_size', type=int, default=4)
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--num_workers', type=int, default=4)
+    parser.add_argument('--pin_memory', action='store_true')
+    args = parser.parse_args()
+    main(args)
