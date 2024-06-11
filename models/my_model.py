@@ -4,6 +4,7 @@ from torchvision import models
 import timm
 
 
+# 모델 정의
 class MyModel(nn.Module):
     def __init__(self, num_classes=101, top_k=5):
         super(MyModel, self).__init__()
@@ -73,7 +74,6 @@ class MyModel(nn.Module):
         output = self.fc2(lstm_output)  # (batch_size, num_classes)
 
         return output
-
 
 # 모델 인스턴스 생성
 model = MyModel(num_classes=101, top_k=5)
