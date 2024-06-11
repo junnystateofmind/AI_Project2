@@ -51,9 +51,8 @@ class UCF101Dataset(Dataset):
         else:
             videoname = self.test_split[idx]
         class_idx = self.class_label2idx[videoname[:videoname.find('/')]]
-        filename = os.path.join(self.root_dir, 'UCF-101', videoname)
+        filename = os.path.join(self.root_dir, 'UCF101', videoname)
 
-        # Use OpenCV to read the video
         cap = cv2.VideoCapture(filename)
         frames = []
         while cap.isOpened():
@@ -65,9 +64,6 @@ class UCF101Dataset(Dataset):
         cap.release()
 
         videodata = np.array(frames)
-        if len(videodata.shape) != 4:  # Ensure the video data has four dimensions
-            raise ValueError(f"Failed to load video: {filename}")
-
         length, height, width, channel = videodata.shape
 
         if self.train:
@@ -79,7 +75,7 @@ class UCF101Dataset(Dataset):
                 seed = random.random()
                 for frame in clip:
                     random.seed(seed)
-                    frame = self.toPIL(frame)
+                    frame = Image.fromarray(frame)
                     frame = self.transforms_(frame)
                     trans_clip.append(frame)
                 clip = torch.stack(trans_clip).permute([1, 0, 2, 3])
@@ -98,7 +94,7 @@ class UCF101Dataset(Dataset):
                     seed = random.random()
                     for frame in clip:
                         random.seed(seed)
-                        frame = self.toPIL(frame)
+                        frame = Image.fromarray(frame)
                         frame = self.transforms_(frame)
                         trans_clip.append(frame)
                     clip = torch.stack(trans_clip).permute([1, 0, 2, 3])
@@ -119,11 +115,17 @@ class FrameNormalize:
         if isinstance(video, torch.Tensor):
             video = video.float()
         else:
-            video = torch.tensor(np.array(video), dtype=torch.float32)  # 여기서 np.array를 통해 PIL 이미지를 numpy 배열로 변환 후 텐서로 변환
+            video = torch.tensor(np.array(video), dtype=torch.float32)
 
-        for t in video:
+        if video.dim() == 4:  # (B, C, H, W) 배치 형태일 때
+            for t in video:
+                for c, (mean, std) in enumerate(zip(self.mean, self.std)):
+                    t[c, :, :].sub_(mean).div_(std)
+        elif video.dim() == 3:  # (C, H, W) 단일 이미지일 때
             for c, (mean, std) in enumerate(zip(self.mean, self.std)):
-                t[c, :, :].sub_(mean).div_(std)
+                video[c, :, :].sub_(mean).div_(std)
+        else:
+            raise ValueError("Unexpected video dimensions: {}".format(video.dim()))
         return video
 
 
