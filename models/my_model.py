@@ -36,7 +36,7 @@ class MyModel(nn.Module):
         # MLP를 사용하여 각 프레임의 중요도를 계산합니다.
         importance_scores = []
         for i in range(num_frames):
-            frame = x[:, i, :, :, :].view(batch_size, -1)
+            frame = x[:, i, :, :, :].view(batch_size, -1)  # (batch_size, channels * height * width)로 변환
             score = self.mlp(frame)
             importance_scores.append(score)
         importance_scores = torch.stack(importance_scores, dim=1).squeeze(-1)  # (batch_size, num_frames)
