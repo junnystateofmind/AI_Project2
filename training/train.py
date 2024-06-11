@@ -139,6 +139,8 @@ def custom_collate_fn(batch):
     print(f"Labels type: {[type(label) for label in labels]}")
     print(f"Labels length: {len(labels)}")
 
+    # Print the shape of the first frame in the first video of the batch
+    print(f"Shape of one frame: {videos[0, 0].shape}")  # prints shape of (channels, height, width)
     try:
         labels = torch.tensor(labels, dtype=torch.int64)
     except Exception as e:
