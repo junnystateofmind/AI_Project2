@@ -64,6 +64,7 @@ class UCF101Dataset(Dataset):
         cap.release()
 
         videodata = np.array(frames)
+        print("videodata.shape : ", videodata.shape)
         length, height, width, channel = videodata.shape
 
         if self.train:
