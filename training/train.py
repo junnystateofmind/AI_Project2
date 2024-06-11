@@ -51,7 +51,7 @@ class UCF101Dataset(Dataset):
         else:
             videoname = self.test_split[idx]
         class_idx = self.class_label2idx[videoname[:videoname.find('/')]]
-        filename = os.path.join(self.root_dir, 'UCF101', videoname)
+        filename = os.path.join(self.root_dir, 'UCF-101', videoname)
 
         cap = cv2.VideoCapture(filename)
         frames = []
