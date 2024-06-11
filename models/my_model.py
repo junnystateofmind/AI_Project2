@@ -4,13 +4,12 @@ from torchvision import models
 import timm
 
 
-# 모델 정의
 class MyModel(nn.Module):
-    def __init__(self, num_classes=101, top_k=5, height=240, width=320):
+    def __init__(self, num_classes=101, top_k=5):
         super(MyModel, self).__init__()
         self.top_k = top_k
-        self.height = height
-        self.width = width
+        self.height = 240
+        self.width = 320
 
         # GhostNet 모델 불러오기
         self.image_model = timm.create_model('ghostnet_100', pretrained=False)
@@ -27,7 +26,7 @@ class MyModel(nn.Module):
 
         # MLP for frame selection
         self.mlp = nn.Sequential(
-            nn.Linear(height * width * 3, 512),
+            nn.Linear(240 * 320 * 3, 512),
             nn.ReLU(),
             nn.Linear(512, 1)
         )
@@ -35,24 +34,29 @@ class MyModel(nn.Module):
     def forward(self, x):
         batch_size, num_frames, channels, height, width = x.size()  # x는 (batch_size, num_frames, channels, height, width)
 
+        # 입력 크기가 초기화된 크기와 일치하는지 확인합니다.
         assert height == self.height and width == self.width, \
             f"Input height and width must match the initialized values ({self.height}, {self.width})"
 
         # 각 프레임의 중요도를 계산합니다.
         importance_scores = []
-        for i in range(num_frames):
-            frame = x[:, i, :, :, :]  # 각 배치의 i번째 프레임을 가져옵니다.
-            frame = frame.view(batch_size, -1)  # (batch_size, channels * height * width)로 변환
-            score = self.mlp(frame)  # MLP를 통해 중요도 계산
-            importance_scores.append(score)
-        importance_scores = torch.stack(importance_scores, dim=1).squeeze(-1)  # (batch_size, num_frames)
+        for i in range(batch_size):
+            video_importance_scores = []
+            for j in range(num_frames):
+                frame = x[i, j, :, :, :]  # 각 비디오의 j번째 프레임을 가져옵니다.
+                frame = frame.view(1, -1)  # (1, channels * height * width)로 변환
+                score = self.mlp(frame)  # MLP를 통해 중요도 계산
+                video_importance_scores.append(score)
+            video_importance_scores = torch.stack(video_importance_scores).squeeze(-1)
+            importance_scores.append(video_importance_scores)
+        importance_scores = torch.stack(importance_scores)  # (batch_size, num_frames)
 
         # top_k 프레임 선택
         _, selected_indices = torch.topk(importance_scores, self.top_k, dim=1)
 
         selected_frames = []
         for i in range(batch_size):
-            selected_frames.append(x[i, selected_indices[i], :, :, :])  # 각 배치에서 선택된 프레임을 추가
+            selected_frames.append(x[i, selected_indices[i], :, :, :])  # 각 비디오에서 선택된 프레임을 추가
         selected_frames = torch.stack(selected_frames)  # (batch_size, top_k, channels, height, width)
 
         # CNN 통과
@@ -81,6 +85,7 @@ class MyModel(nn.Module):
 
         return output
 
+
 # 모델 인스턴스 생성
 model = MyModel(num_classes=101, top_k=5)
 
@@ -91,4 +96,4 @@ model.to(device)
 # 모델 요약 정보 출력
 from torchinfo import summary
 
-summary(model, input_size=(8, 16, 3, 240, 320))
+summary(model, input_size=(8, 16, 3, 240, 320), device=device.type)  # (batch_size, num_frames, channels, height, width)
