@@ -31,15 +31,14 @@ class MyModel(nn.Module):
         )
 
     def forward(self, x):
-        batch_size, num_frames, channels, height, width = x.size()
+        batch_size, num_frames, channels, height, width = x.size()  # x는 (batch_size, num_frames, channels, height, width)
 
-        # MLP를 사용하여 각 프레임의 중요도를 계산합니다.
+        # 각 프레임의 중요도를 계산합니다.
         importance_scores = []
         for i in range(num_frames):
-            frame = x[:, i, :, :, :]
-            frame = nn.functional.interpolate(frame, size=(112, 112))  # Ensure the frame is resized to (112, 112)
-            frame = frame.view(batch_size, -1)  # Reshape to (batch_size, 3 * 112 * 112)
-            score = self.mlp(frame)
+            frame = x[:, i, :, :, :]  # 각 배치의 i번째 프레임을 가져옵니다.
+            frame = frame.view(batch_size, -1)  # (batch_size, channels * height * width)로 변환
+            score = self.mlp(frame)  # MLP를 통해 중요도 계산
             importance_scores.append(score)
         importance_scores = torch.stack(importance_scores, dim=1).squeeze(-1)  # (batch_size, num_frames)
 
@@ -48,7 +47,7 @@ class MyModel(nn.Module):
 
         selected_frames = []
         for i in range(batch_size):
-            selected_frames.append(x[i, selected_indices[i], :, :, :])
+            selected_frames.append(x[i, selected_indices[i], :, :, :])  # 각 배치에서 선택된 프레임을 추가
         selected_frames = torch.stack(selected_frames)  # (batch_size, top_k, channels, height, width)
 
         # CNN 통과
