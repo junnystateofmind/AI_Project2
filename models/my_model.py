@@ -6,9 +6,11 @@ import timm
 
 # 모델 정의
 class MyModel(nn.Module):
-    def __init__(self, num_classes=101, top_k=5):
+    def __init__(self, num_classes=101, top_k=5, height=240, width=320):
         super(MyModel, self).__init__()
         self.top_k = top_k
+        self.height = height
+        self.width = width
 
         # GhostNet 모델 불러오기
         self.image_model = timm.create_model('ghostnet_100', pretrained=False)
@@ -25,13 +27,16 @@ class MyModel(nn.Module):
 
         # MLP for frame selection
         self.mlp = nn.Sequential(
-            nn.Linear(240 * 320 * 3, 512),
+            nn.Linear(height * width * 3, 512),
             nn.ReLU(),
             nn.Linear(512, 1)
         )
 
     def forward(self, x):
         batch_size, num_frames, channels, height, width = x.size()  # x는 (batch_size, num_frames, channels, height, width)
+
+        assert height == self.height and width == self.width, \
+            f"Input height and width must match the initialized values ({self.height}, {self.width})"
 
         # 각 프레임의 중요도를 계산합니다.
         importance_scores = []
