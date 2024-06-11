@@ -37,7 +37,8 @@ class MyModel(nn.Module):
         importance_scores = []
         for i in range(num_frames):
             frame = x[:, i, :, :, :]
-            frame = nn.functional.interpolate(frame, size=(112, 112)).view(batch_size, -1)
+            frame = nn.functional.interpolate(frame, size=(112, 112))  # Ensure the frame is resized to (112, 112)
+            frame = frame.view(batch_size, -1)  # Reshape to (batch_size, 3 * 112 * 112)
             score = self.mlp(frame)
             importance_scores.append(score)
         importance_scores = torch.stack(importance_scores, dim=1).squeeze(-1)  # (batch_size, num_frames)
