@@ -202,12 +202,18 @@ def main(args):
     train_size = int(0.8 * len(full_dataset))
     test_size = len(full_dataset) - train_size
     train_dataset, test_dataset = random_split(full_dataset, [train_size, test_size])
+    print(f"Train dataset size: {len(train_dataset)}")
 
     print("Creating data loaders...")
     train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,
                               collate_fn=custom_collate_fn, pin_memory=args.pin_memory, persistent_workers=True)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
                              collate_fn=custom_collate_fn, pin_memory=args.pin_memory, persistent_workers=True)
+    # train_loader에서 어떠한 데이터를 출력하는지 하나만 출력해보기
+    for inputs, labels in train_loader:
+        print(f"Train Loader Inputs shape: {inputs.shape}")
+        print(f"Train Loader Labels shape: {labels.shape}")
+        break
 
     print("Initializing model...")
     model = MyModel(num_classes=101, top_k=5).to(device)
