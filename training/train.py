@@ -15,6 +15,7 @@ from tqdm import tqdm
 from torch.cuda.amp import autocast, GradScaler
 from torch import optim
 from models.my_model import MyModel
+from torchvision.transforms import ToTensor
 
 
 class UCF101Dataset(Dataset):
@@ -190,6 +191,7 @@ def main(args):
 
     transform = Compose([
         Resize((240, 320)),
+        ToTensor(),
         Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
