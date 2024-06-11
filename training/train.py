@@ -119,7 +119,7 @@ class FrameNormalize:
         if isinstance(video, torch.Tensor):
             video = video.float()
         else:
-            video = torch.tensor(video, dtype=torch.float32)
+            video = torch.tensor(np.array(video), dtype=torch.float32)  # 여기서 np.array를 통해 PIL 이미지를 numpy 배열로 변환 후 텐서로 변환
 
         for t in video:
             for c, (mean, std) in enumerate(zip(self.mean, self.std)):
