@@ -91,4 +91,4 @@ model.to(device)
 # 모델 요약 정보 출력
 from torchinfo import summary
 
-summary(model, input_size=(8, 16, 3, 112, 112), device=device.type)  # (batch_size, num_frames, channels, height, width)
+summary(model, input_size=(8, 16, 3, 240, 320))
