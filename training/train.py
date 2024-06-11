@@ -189,8 +189,8 @@ def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     transform = Compose([
-        Resize((112, 112)),
-        FrameNormalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        Resize((240, 320)),
+        Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
     print("Loading datasets...")
