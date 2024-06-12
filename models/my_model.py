@@ -32,10 +32,8 @@ class MyModel(nn.Module):
         )
 
     def forward(self, x):
-        batch_size, num_frames, channels, height, width = x.size()  # x는 (batch_size, num_frames, channels, height, width)
-
-        # 입력 크기 출력
         print(f"Input size: {x.size()}")
+        batch_size, num_frames, channels, height, width = x.size()  # x는 (batch_size, num_frames, channels, height, width)
 
         # 입력 크기가 초기화된 크기와 일치하는지 확인합니다.
         assert height == self.height and width == self.width, \

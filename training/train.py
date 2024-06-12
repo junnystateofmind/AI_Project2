@@ -81,8 +81,11 @@ class UCF101Dataset(Dataset):
                     frame = self.transforms_(frame)
                     trans_clip.append(frame)
                 clip = torch.stack(trans_clip).permute([1, 0, 2, 3])
+                assert clip.shape[2] == 240 and clip.shape[
+                    3] == 320, f"Unexpected frame size: {clip.shape[2:]} after transforms"
             else:
                 clip = torch.tensor(clip)
+                clip = clip.permute(3, 0, 1, 2)  # Change shape from (T, H, W, C) to (C, T, H, W)
 
             return clip, int(class_idx)
         else:
@@ -100,8 +103,11 @@ class UCF101Dataset(Dataset):
                         frame = self.transforms_(frame)
                         trans_clip.append(frame)
                     clip = torch.stack(trans_clip).permute([1, 0, 2, 3])
+                    assert clip.shape[2] == 240 and clip.shape[
+                        3] == 320, f"Unexpected frame size: {clip.shape[2:]} after transforms"
                 else:
                     clip = torch.tensor(clip)
+                    clip = clip.permute(3, 0, 1, 2)  # Change shape from (T, H, W, C) to (C, T, H, W)
                 all_clips.append(clip)
                 all_idx.append(int(class_idx))
 
