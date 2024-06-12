@@ -32,7 +32,7 @@ class MyModel(nn.Module):
         )
 
     def forward(self, x):
-        batch_size, num_clip, channels, height, width = x.size()  # x는 (batch_size, num_clip, RGB, height, width)
+        batch_size, num_frames, channels, height, width = x.size()  # x는 (batch_size, num_frames, channels, height, width)
 
         # 입력 크기 출력
         print(f"Input size: {x.size()}")
@@ -45,15 +45,16 @@ class MyModel(nn.Module):
         importance_scores = []
         for i in range(batch_size):
             video_importance_scores = []
-            for j in range(num_clip):
+            for j in range(num_frames):
                 frame = x[i, j, :, :, :]  # 각 비디오의 j번째 프레임을 가져옵니다.
-                frame = frame.view(1, -1)  # (1, channels * height * width)로 변환
-                print(f"frame size for MLP: {frame.size()}")  # 프레임 크기 확인
+                print(f"Original frame size: {frame.size()}")  # Debug print
+                frame = frame.view(1, channels * height * width)  # (1, channels * height * width)로 변환
+                print(f"Transformed frame size for MLP: {frame.size()}")  # Debug print
                 score = self.mlp(frame)  # MLP를 통해 중요도 계산
                 video_importance_scores.append(score)
             video_importance_scores = torch.stack(video_importance_scores).squeeze(-1)
             importance_scores.append(video_importance_scores)
-        importance_scores = torch.stack(importance_scores)  # (batch_size, num_clip)
+        importance_scores = torch.stack(importance_scores)  # (batch_size, num_frames)
 
         # top_k 프레임 선택
         _, selected_indices = torch.topk(importance_scores, self.top_k, dim=1)
