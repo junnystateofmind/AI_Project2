@@ -162,6 +162,18 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
     running_loss = 0.0
     for inputs, labels in tqdm(data_loader, desc="Training"):
         inputs, labels = inputs.to(device), labels.to(device)
+
+        print(f"Input size before transformation: {inputs.size()}")
+
+        # 만약 5D 텐서 (batch_size, channels, frames, height, width)라면 frames 차원을 앞으로 이동
+        inputs = inputs.permute(0, 2, 1, 3, 4)  # -> (batch_size, frames, channels, height, width)
+        print(f"Input size after permutation: {inputs.size()}")
+
+        # 모델 입력에 맞게 차원 조정 (Flatten or use appropriate layer)
+        batch_size, frames, channels, height, width = inputs.size()
+        inputs = inputs.view(batch_size * frames, channels, height, width)
+        print(f"Input size after view: {inputs.size()}")
+
         optimizer.zero_grad()
 
         with autocast():
