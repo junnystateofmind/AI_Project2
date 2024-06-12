@@ -171,8 +171,8 @@ def train_one_epoch(model, criterion, optimizer, data_loader, device, scaler):
 
         # 모델 입력에 맞게 차원 조정 (Flatten or use appropriate layer)
         batch_size, frames, channels, height, width = inputs.size()
-        inputs = inputs.view(batch_size * frames, channels, height, width)
-        print(f"Input size after view: {inputs.size()}")
+        inputs = inputs.reshape(batch_size * frames, channels, height, width)
+        print(f"Input size after reshape: {inputs.size()}")
 
         optimizer.zero_grad()
 
