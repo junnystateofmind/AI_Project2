@@ -47,8 +47,8 @@ class MyModel(nn.Module):
             video_importance_scores = []
             for j in range(num_frames):
                 frame = x[i, j, :, :, :]  # 각 비디오의 j번째 프레임을 가져옵니다.
-                print("프레임 차원 확인:", frame.size())
                 frame = frame.view(1, -1)  # (1, channels * height * width)로 변환
+                print(f"frame size for MLP: {frame.size()}")
                 score = self.mlp(frame)  # MLP를 통해 중요도 계산
                 video_importance_scores.append(score)
             video_importance_scores = torch.stack(video_importance_scores).squeeze(-1)
