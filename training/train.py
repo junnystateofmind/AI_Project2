@@ -226,7 +226,15 @@ def main(args):
     #     break
 
     print("Initializing model...")
-    model = MyModel(num_classes=101, top_k=5).to(device)
+    # best_model.pth 파일이 없는 경우에만 모델을 초기화합니다.
+    if not os.path.exists("best_model.pth"):
+        model = MyModel(num_classes=101, top_k=5).to(device)
+        print("Model initialized.")
+    else:
+        model = MyModel(num_classes=101, top_k=5)
+        model.load_state_dict(torch.load("best_model.pth"))
+        model.to(device)
+        print("Model loaded from best_model.pth.")
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
     scaler = GradScaler()
