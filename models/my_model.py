@@ -3,7 +3,6 @@ import torch.nn as nn
 from torchvision import models
 import timm
 
-
 import timm
 import torch
 import torch.nn as nn
@@ -53,7 +52,7 @@ class MyModel(nn.Module):
             video_importance_scores = []
             for j in range(num_clip):
                 frame = x[i, j, :, :, :]  # 각 비디오의 j번째 프레임을 가져옵니다.
-                frame = frame.view(1, channels * height * width)  # (1, channels * height * width)로 변환
+                frame = frame.reshape(1, channels * height * width)  # (1, channels * height * width)로 변환
                 score = self.mlp(frame)  # MLP를 통해 중요도 계산
                 video_importance_scores.append(score)
             video_importance_scores = torch.stack(video_importance_scores).squeeze(-1)
@@ -95,12 +94,12 @@ class MyModel(nn.Module):
         return output
 
 
-# 모델 인스턴스 생성
-model = MyModel(num_classes=101, top_k=5)
-
-# 모델을 GPU로 이동
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.to(device)
+# # 모델 인스턴스 생성
+# model = MyModel(num_classes=101, top_k=5)
+#
+# # 모델을 GPU로 이동
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# model.to(device)
 
 # 모델 요약 정보 출력
 # from torchinfo import summary
