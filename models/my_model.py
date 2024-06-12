@@ -35,10 +35,10 @@ class MyModel(nn.Module):
         )
 
     def forward(self, x):
-        print(f"Input size before transformation: {x.size()}")
+        # print(f"Input size before transformation: {x.size()}")
         # Permute the dimensions to (batch_size, num_clip, channels, height, width)
         x = x.permute(0, 2, 1, 3, 4)
-        print(f"Input size after permutation: {x.size()}")
+        # print(f"Input size after permutation: {x.size()}")
 
         batch_size, num_clip, channels, height, width = x.size()
 

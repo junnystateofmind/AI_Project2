@@ -65,7 +65,7 @@ class UCF101Dataset(Dataset):
         cap.release()
 
         videodata = np.array(frames)
-        print("videodata.shape : ", videodata.shape)
+        # print("videodata.shape : ", videodata.shape)
         length, height, width, channel = videodata.shape
 
         if self.train:
@@ -141,11 +141,11 @@ def custom_collate_fn(batch):
     videos = [item[0] for item in batch]
     labels = [item[1] for item in batch]
 
-    print(f"Labels: {labels}")
-    print(f"Labels type: {[type(label) for label in labels]}")
-    print(f"Labels length: {len(labels)}")
-
-    print(f"Shape of one frame: {videos[0].shape}")  # 채널 포함
+    # print(f"Labels: {labels}")
+    # print(f"Labels type: {[type(label) for label in labels]}")
+    # print(f"Labels length: {len(labels)}")
+    #
+    # print(f"Shape of one frame: {videos[0].shape}")  # 채널 포함
     try:
         labels = torch.tensor(labels, dtype=torch.int64)
     except Exception as e:
@@ -220,10 +220,10 @@ def main(args):
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers,
                              collate_fn=custom_collate_fn, pin_memory=args.pin_memory, persistent_workers=True)
     # train_loader에서 어떠한 데이터를 출력하는지 하나만 출력해보기
-    for inputs, labels in train_loader:
-        print(f"Train Loader Inputs shape: {inputs.shape}")
-        print(f"Train Loader Labels shape: {labels.shape}")
-        break
+    # for inputs, labels in train_loader:
+    #     print(f"Train Loader Inputs shape: {inputs.shape}")
+    #     print(f"Train Loader Labels shape: {labels.shape}")
+    #     break
 
     print("Initializing model...")
     model = MyModel(num_classes=101, top_k=5).to(device)
