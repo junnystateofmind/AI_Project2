@@ -4,6 +4,10 @@ from torchvision import models
 import timm
 
 
+import timm
+import torch
+import torch.nn as nn
+
 class MyModel(nn.Module):
     def __init__(self, num_classes=101, top_k=5):
         super(MyModel, self).__init__()
@@ -33,7 +37,11 @@ class MyModel(nn.Module):
 
     def forward(self, x):
         print(f"Input size before transformation: {x.size()}")
-        batch_size, num_clip, channels, height, width = x.size()  # x는 (batch_size, num_clip, channels, height, width)
+        # Permute the dimensions to (batch_size, num_clip, channels, height, width)
+        x = x.permute(0, 2, 1, 3, 4)
+        print(f"Input size after permutation: {x.size()}")
+
+        batch_size, num_clip, channels, height, width = x.size()
 
         # 입력 크기가 초기화된 크기와 일치하는지 확인합니다.
         assert height == self.height and width == self.width, \
