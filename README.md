@@ -3,8 +3,6 @@ Topic: Design and Analysis Report of Action Recognition AI Model for UCF101 data
 
 Submission: Please submit the project code (including comments) and the modeling analysis report as a single compressed ZIP file with the following naming format: Name_StudentID_pr2.zip
 
-e.g., "박재문_2018-12967_pr2.zip"
-
 Due Date: 6/19 23:59 PM
 
 Report:  (1) Designing a Suitable Model for UCF101 Action Recognition and the Reasoning Behind It.
@@ -58,25 +56,6 @@ AI_Project2/
 │   ├── train_utils.py  # 훈련 관련 유틸리티 함수
 │   ├── callbacks.py  # 훈련 중 사용할 콜백 함수들
 │   └── configs.py  # 훈련 설정 파일
-│
-├── evaluation/
-│   ├── evaluate.py  # 모델 평가 스크립트
-│   ├── metrics.py  # 평가 지표 계산 스크립트
-│   └── visualization.py  # 평가 결과 시각화 스크립트
-│
-├── reports/
-│   ├── performance_report.md  # 모델 성능 및 결과 분석 보고서
-│   └── figures/  # 그래프, 혼동 행렬 등 시각 자료
-│
-├── notebooks/
-│   ├── data_exploration.ipynb  # 데이터셋 탐색 및 시각화
-│   ├── model_training.ipynb  # 모델 훈련 실험 노트북
-│   └── results_analysis.ipynb  # 결과 분석 노트북
-│
-├── scripts/
-│   ├── preprocess_data.sh  # 데이터 전처리 스크립트
-│   └── train_model.sh  # 모델 훈련 스크립트
-│
 ├── requirements.txt  # 필요한 패키지 목록
 └── README.md  # 프로젝트 설명 및 실행 방법
 
